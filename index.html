@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PingWatch — Uptime Monitoring</title>
+  <meta name="description" content="Monitor your websites. Get instant alerts on Telegram, Discord, or Email when something goes down." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Geist+Mono:wght@300..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/style.css" />
+  <style>
+    /* ── Landing ── */
+    .hero {
+      padding-block: clamp(5rem, 12vw, 6rem);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%,
+        oklch(from var(--color-primary) l c h / 0.13) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: var(--space-5);
+      padding: var(--space-1) var(--space-3);
+      background: oklch(from var(--color-primary) l c h / 0.1);
+      border: 1px solid oklch(from var(--color-primary) l c h / 0.25);
+      border-radius: var(--radius-full);
+    }
+    .hero__title {
+      font-family: var(--font-mono);
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: var(--space-5);
+      max-width: 18ch;
+      margin-inline: auto;
+    }
+    .hero__title em { color: var(--color-primary); font-style: normal; }
+    .hero__sub {
+      font-size: var(--text-base);
+      color: var(--color-text-muted);
+      max-width: 54ch;
+      margin-inline: auto;
+      margin-bottom: var(--space-10);
+      line-height: 1.7;
+    }
+
+    /* terminal */
+    .terminal {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      max-width: 600px;
+      margin-inline: auto;
+      text-align: left;
+    }
+    .terminal__bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface-offset);
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .terminal__dot { width: 10px; height: 10px; border-radius: var(--radius-full); }
+    .terminal__dot:nth-child(1) { background: #e05565; }
+    .terminal__dot:nth-child(2) { background: #e07a35; }
+    .terminal__dot:nth-child(3) { background: #5fb53c; }
+    .terminal__caption {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      margin: 0 auto;
+      padding-right: 36px;
+    }
+    .terminal__body {
+      padding: var(--space-5);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      line-height: 1.9;
+    }
+    .ln { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+    .p  { color: var(--color-text-faint); user-select: none; }
+    .c  { color: var(--color-text-muted); }
+    .ok { color: var(--color-success); }
+    .er { color: var(--color-notification); }
+    .ts { color: var(--color-text-faint); margin-left: auto; }
+
+    /* auth section */
+    .auth-section { padding-block: clamp(4rem, 8vw, 5rem); }
+    .auth-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-12);
+      align-items: start;
+    }
+    @media (max-width: 768px) { .auth-grid { grid-template-columns: 1fr; } }
+
+    .auth-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      box-shadow: var(--shadow-md);
+    }
+    .auth-card__title {
+      font-family: var(--font-mono);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+    .auth-card__sub {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-6);
+    }
+
+    /* tabs */
+    .tabs {
+      display: flex;
+      gap: var(--space-1);
+      background: var(--color-surface-offset);
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-6);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: var(--space-2) var(--space-3);
+      border-radius: calc(var(--radius-md) - 2px);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text-muted);
+      min-height: 36px;
+    }
+    .tab-btn.active {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      box-shadow: var(--shadow-sm);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: flex; flex-direction: column; gap: var(--space-4); }
+
+    /* channel fields */
+    .channel-extra { display: none; flex-direction: column; gap: var(--space-2); }
+    .channel-extra.visible { display: flex; }
+    .hint { font-size: var(--text-xs); color: var(--color-text-faint); line-height: 1.6; }
+
+    /* features */
+    .features {
+      padding-block: clamp(4rem, 8vw, 6rem);
+      border-top: 1px solid var(--color-divider);
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(260px,100%), 1fr));
+      gap: var(--space-4);
+      margin-top: var(--space-8);
+    }
+    .feature-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+    }
+    .feature-card svg { color: var(--color-primary); margin-bottom: var(--space-3); }
+    .feature-card h3 {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      margin-bottom: var(--space-1);
+    }
+    .feature-card p { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+
+    /* sql box */
+    .sql-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-top: var(--space-8);
+    }
+    .sql-box__head {
+      padding: var(--space-2) var(--space-4);
+      background: var(--color-surface-offset);
+      border-bottom: 1px solid var(--color-divider);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+    }
+    .sql-box pre {
+      margin: 0;
+      padding: var(--space-4);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      overflow-x: auto;
+      line-height: 1.9;
+    }
+
+    /* footer */
+    footer {
+      padding-block: var(--space-8);
+      border-top: 1px solid var(--color-divider);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+    }
+    footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+    .logo-mono { font-family: var(--font-mono); }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    window.SUPABASE_URL = '__SUPABASE_URL__';
+    window.SUPABASE_KEY = '__SUPABASE_PUBLISHABLE_KEY__';
+  </script>
+  <script src="assets/app.js"></script>
+  <script>AppUtils.initTheme();</script>
+
+  <!-- Navbar -->
+  <header class="navbar" role="banner">
+    <div class="container navbar__inner">
+      <a href="index.html" class="navbar__logo" aria-label="PingWatch home">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect width="28" height="28" rx="6" fill="currentColor" opacity="0.08"/>
+          <circle cx="14" cy="14" r="5" stroke="currentColor" stroke-width="1.5" opacity="0.25"/>
+          <circle cx="14" cy="14" r="2.5" fill="var(--color-primary)"/>
+          <path d="M14 4v4M14 20v4M4 14h4M20 14h4" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        </svg>
+        <span class="navbar__logo-text">Ping<span>Watch</span></span>
+      </a>
+      <div class="navbar__actions">
+        <button class="theme-toggle" data-theme-toggle onclick="AppUtils.toggleTheme()" aria-label="Toggle theme"></button>
+        <a href="dashboard.html" class="btn btn-secondary btn-sm" id="nav-dashboard" style="display:none">Dashboard →</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Hero -->
+    <section class="hero" aria-label="Introduction">
+      <div class="container">
+        <div class="hero__eyebrow"><span aria-hidden="true">●</span> Checks every 5 minutes</div>
+        <h1 class="hero__title">Know when your site goes&nbsp;<em>down</em>.</h1>
+        <p class="hero__sub">
+          Add a URL, choose your notification channel — Telegram, Discord, or Email.
+          PingWatch pings it round the clock and alerts you the moment it breaks,
+          then again when it's back.
+        </p>
+
+        <div class="terminal" role="img" aria-label="Example monitor log">
+          <div class="terminal__bar">
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <span class="terminal__caption">monitor.log</span>
+          </div>
+          <div class="terminal__body">
+            <div class="ln"><span class="p">$</span><span class="c">check https://api.acme.com/health</span><span class="ts">14:00</span></div>
+            <div class="ln"><span class="p"> </span><span class="ok">✓ 200 OK — 118ms</span></div>
+            <div class="ln"><span class="p">$</span><span class="c">check https://api.acme.com/health</span><span class="ts">14:05</span></div>
+            <div class="ln"><span class="p"> </span><span class="er">✗ TIMEOUT — incident opened → alert sent</span></div>
+            <div class="ln"><span class="p">$</span><span class="c">check https://api.acme.com/health</span><span class="ts">14:35</span></div>
+            <div class="ln"><span class="p"> </span><span class="ok">✓ 200 OK — incident resolved (30m) → alert sent</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auth -->
+    <section class="auth-section" id="start" aria-label="Sign up or sign in">
+      <div class="container">
+        <div class="auth-grid">
+
+          <!-- Form card -->
+          <div class="auth-card">
+            <h2 class="auth-card__title">Get started free</h2>
+            <p class="auth-card__sub">No credit card required.</p>
+
+            <div class="tabs" role="tablist" aria-label="Sign up or sign in">
+              <button class="tab-btn active" role="tab" aria-selected="true" id="tab-reg" type="button">Sign Up</button>
+              <button class="tab-btn" role="tab" aria-selected="false" id="tab-login" type="button">Sign In</button>
+            </div>
+
+            <!-- Sign Up -->
+            <div class="tab-panel active" id="panel-reg" role="tabpanel" aria-labelledby="tab-reg">
+              <form id="form-reg" novalidate>
+                <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+                  <div class="form-group">
+                    <label class="form-label" for="reg-email">Email</label>
+                    <input class="form-input" type="email" id="reg-email" placeholder="you@example.com" required autocomplete="email"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="reg-pass">Password</label>
+                    <input class="form-input" type="password" id="reg-pass" placeholder="Min. 8 characters" required autocomplete="new-password" minlength="8"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="reg-channel">Notification channel</label>
+                    <select class="form-select" id="reg-channel">
+                      <option value="telegram">Telegram</option>
+                      <option value="discord">Discord</option>
+                      <option value="email">Email</option>
+                    </select>
+                  </div>
+
+                  <!-- Telegram -->
+                  <div class="form-group channel-extra visible" id="extra-telegram">
+                    <label class="form-label" for="reg-tg">Telegram Chat ID</label>
+                    <input class="form-input" type="text" id="reg-tg" placeholder="123456789"/>
+                    <span class="hint">
+                      Open <strong>@userinfobot</strong> in Telegram, send <code>/start</code> — copy the <em>Id</em> number.
+                    </span>
+                  </div>
+
+                  <!-- Discord -->
+                  <div class="form-group channel-extra" id="extra-discord">
+                    <label class="form-label" for="reg-discord">Discord Webhook URL</label>
+                    <input class="form-input" type="url" id="reg-discord" placeholder="https://discord.com/api/webhooks/…"/>
+                    <span class="hint">Server Settings → Integrations → Webhooks → New Webhook → Copy URL</span>
+                  </div>
+
+                  <!-- Email -->
+                  <div class="form-group channel-extra" id="extra-email">
+                    <label class="form-label" for="reg-notif-email">Notification email</label>
+                    <input class="form-input" type="email" id="reg-notif-email" placeholder="alerts@example.com" autocomplete="off"/>
+                  </div>
+
+                  <button class="btn btn-primary" type="submit" id="reg-btn" style="width:100%;justify-content:center">
+                    Create account
+                  </button>
+                  <span class="form-error" id="reg-err" hidden></span>
+                </div>
+              </form>
+            </div>
+
+            <!-- Sign In -->
+            <div class="tab-panel" id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+              <form id="form-login" novalidate>
+                <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+                  <div class="form-group">
+                    <label class="form-label" for="login-email">Email</label>
+                    <input class="form-input" type="email" id="login-email" placeholder="you@example.com" required autocomplete="email"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="login-pass">Password</label>
+                    <input class="form-input" type="password" id="login-pass" placeholder="Your password" required autocomplete="current-password"/>
+                  </div>
+                  <button class="btn btn-primary" type="submit" id="login-btn" style="width:100%;justify-content:center">
+                    Sign in
+                  </button>
+                  <span class="form-error" id="login-err" hidden></span>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Info column -->
+          <div>
+            <h2 style="font-family:var(--font-mono);font-size:var(--text-lg);font-weight:600;margin-bottom:var(--space-5)">How it works</h2>
+            <ol style="display:flex;flex-direction:column;gap:var(--space-4);list-style:none;counter-reset:steps">
+              <li style="display:flex;gap:var(--space-4);align-items:flex-start;counter-increment:steps">
+                <span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary);background:oklch(from var(--color-primary) l c h / 0.1);border:1px solid oklch(from var(--color-primary) l c h / 0.25);border-radius:var(--radius-full);padding:2px 9px;flex-shrink:0;margin-top:2px">01</span>
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600;margin-bottom:2px">Register</div>
+                  <div style="font-size:var(--text-sm);color:var(--color-text-muted)">Create an account and choose where you want alerts: Telegram, Discord, or Email.</div>
+                </div>
+              </li>
+              <li style="display:flex;gap:var(--space-4);align-items:flex-start;counter-increment:steps">
+                <span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary);background:oklch(from var(--color-primary) l c h / 0.1);border:1px solid oklch(from var(--color-primary) l c h / 0.25);border-radius:var(--radius-full);padding:2px 9px;flex-shrink:0;margin-top:2px">02</span>
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600;margin-bottom:2px">Add URLs</div>
+                  <div style="font-size:var(--text-sm);color:var(--color-text-muted)">Paste any URL into your dashboard. PingWatch starts checking it every 5 minutes immediately.</div>
+                </div>
+              </li>
+              <li style="display:flex;gap:var(--space-4);align-items:flex-start;counter-increment:steps">
+                <span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary);background:oklch(from var(--color-primary) l c h / 0.1);border:1px solid oklch(from var(--color-primary) l c h / 0.25);border-radius:var(--radius-full);padding:2px 9px;flex-shrink:0;margin-top:2px">03</span>
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600;margin-bottom:2px">Get alerted</div>
+                  <div style="font-size:var(--text-sm);color:var(--color-text-muted)">When a site goes down you get a message. When it recovers — another message with downtime duration.</div>
+                </div>
+              </li>
+            </ol>
+
+            <div class="sql-box">
+              <div class="sql-box__head">▸ Run once in Supabase SQL Editor</div>
+              <pre>ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS
+    notification_channel text DEFAULT 'telegram',
+  ADD COLUMN IF NOT EXISTS
+    discord_webhook_url  text,
+  ADD COLUMN IF NOT EXISTS
+    notification_email   text;</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" aria-label="Features">
+      <div class="container">
+        <h2 style="font-family:var(--font-mono);font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em">
+          Zero friction. Zero infrastructure.
+        </h2>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <h3>5-minute pings</h3>
+            <p>Netlify Scheduled Function on <code>*/5 * * * *</code>. Change the cron to any interval you need.</p>
+          </div>
+          <div class="feature-card">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <h3>Down + Recovery alerts</h3>
+            <p>You get a message when the site falls AND when it comes back, with exact downtime in minutes.</p>
+          </div>
+          <div class="feature-card">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <h3>Incident log</h3>
+            <p>Every outage is stored in Supabase with <code>started_at</code>, <code>resolved_at</code>, and <code>duration_seconds</code>.</p>
+          </div>
+          <div class="feature-card">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <h3>No build step</h3>
+            <p>Pure HTML + JS on the frontend. Supabase via CDN. Deploy by drag-and-drop to Netlify.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <span class="logo-mono">PingWatch</span>
+      <span>Supabase + Netlify Scheduled Functions</span>
+    </div>
+  </footer>
+
+  <div id="toast-container" role="status" aria-live="polite"></div>
+
+  <script>
+    // Check logged-in state
+    (async () => {
+      try {
+        const session = await AppUtils.getSession();
+        if (session) document.getElementById('nav-dashboard').style.display = 'inline-flex';
+      } catch(_) {}
+    })();
+
+    // Theme toggle button init
+    document.querySelector('[data-theme-toggle]').addEventListener('click', () => AppUtils.toggleTheme());
+
+    // Tabs
+    const tabReg   = document.getElementById('tab-reg');
+    const tabLogin = document.getElementById('tab-login');
+    const panelReg   = document.getElementById('panel-reg');
+    const panelLogin = document.getElementById('panel-login');
+
+    tabReg.addEventListener('click', () => {
+      tabReg.classList.add('active'); tabReg.setAttribute('aria-selected','true');
+      tabLogin.classList.remove('active'); tabLogin.setAttribute('aria-selected','false');
+      panelReg.classList.add('active'); panelLogin.classList.remove('active');
+    });
+    tabLogin.addEventListener('click', () => {
+      tabLogin.classList.add('active'); tabLogin.setAttribute('aria-selected','true');
+      tabReg.classList.remove('active'); tabReg.setAttribute('aria-selected','false');
+      panelLogin.classList.add('active'); panelReg.classList.remove('active');
+    });
+
+    // Channel field switching
+    const channelSelect = document.getElementById('reg-channel');
+    function syncChannelFields() {
+      const v = channelSelect.value;
+      document.getElementById('extra-telegram').classList.toggle('visible', v === 'telegram');
+      document.getElementById('extra-discord').classList.toggle('visible', v === 'discord');
+      document.getElementById('extra-email').classList.toggle('visible', v === 'email');
+    }
+    channelSelect.addEventListener('change', syncChannelFields);
+
+    // Helpers
+    function setErr(id, msg) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg;
+      el.hidden = !msg;
+    }
+
+    function setBtnState(id, loading, defaultText) {
+      const btn = document.getElementById(id);
+      btn.disabled = loading;
+      btn.textContent = loading ? 'Please wait…' : defaultText;
+    }
+
+    // Sign Up
+    document.getElementById('form-reg').addEventListener('submit', async e => {
+      e.preventDefault();
+      setErr('reg-err', '');
+
+      const email   = document.getElementById('reg-email').value.trim();
+      const pass    = document.getElementById('reg-pass').value;
+      const channel = channelSelect.value;
+      const tgId    = document.getElementById('reg-tg').value.trim();
+      const discord = document.getElementById('reg-discord').value.trim();
+      const notifEmail = document.getElementById('reg-notif-email').value.trim();
+
+      if (!email || !pass) { setErr('reg-err', 'Email and password are required.'); return; }
+      if (pass.length < 8) { setErr('reg-err', 'Password must be at least 8 characters.'); return; }
+      if (channel === 'telegram' && !tgId)      { setErr('reg-err', 'Enter your Telegram Chat ID.'); return; }
+      if (channel === 'discord'  && !discord)   { setErr('reg-err', 'Enter your Discord Webhook URL.'); return; }
+      if (channel === 'email'    && !notifEmail){ setErr('reg-err', 'Enter your notification email.'); return; }
+
+      setBtnState('reg-btn', true, 'Create account');
+
+      try {
+        const sb = AppUtils.getSupabase();
+        const { data, error } = await sb.auth.signUp({ email, password: pass });
+        if (error) throw error;
+
+        const { error: pe } = await sb.from('users').upsert({
+          id:                   data.user.id,
+          email,
+          notification_channel: channel,
+          telegram_chat_id:     channel === 'telegram' ? tgId      : null,
+          discord_webhook_url:  channel === 'discord'  ? discord   : null,
+          notification_email:   channel === 'email'    ? notifEmail: null,
+        });
+        if (pe) throw pe;
+
+        AppUtils.showToast('Account created!', 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+      } catch(err) {
+        setErr('reg-err', err.message || 'Registration failed.');
+      } finally {
+        setBtnState('reg-btn', false, 'Create account');
+      }
+    });
+
+    // Sign In
+    document.getElementById('form-login').addEventListener('submit', async e => {
+      e.preventDefault();
+      setErr('login-err', '');
+
+      const email = document.getElementById('login-email').value.trim();
+      const pass  = document.getElementById('login-pass').value;
+
+      if (!email || !pass) { setErr('login-err', 'Email and password are required.'); return; }
+
+      setBtnState('login-btn', true, 'Sign in');
+
+      try {
+        const sb = AppUtils.getSupabase();
+        const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+        if (error) throw error;
+
+        AppUtils.showToast('Welcome back!', 'success');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
+      } catch(err) {
+        setErr('login-err', err.message || 'Sign in failed.');
+      } finally {
+        setBtnState('login-btn', false, 'Sign in');
+      }
+    });
+  </script>
+</body>
+</html>

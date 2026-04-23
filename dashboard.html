@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — PingWatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Geist+Mono:wght@300..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/style.css" />
+  <style>
+    /* ── Header ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: oklch(from var(--color-bg) l c h / 0.9);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .topbar__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-block: var(--space-3);
+      gap: var(--space-4);
+    }
+    .topbar__logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      text-decoration: none;
+      color: var(--color-text);
+    }
+    .topbar__logo-text {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .topbar__logo-text span { color: var(--color-primary); }
+    .topbar__right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+    .topbar__user {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 180px;
+    }
+    .ch-badge {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      background: oklch(from var(--color-primary) l c h / 0.1);
+      border: 1px solid oklch(from var(--color-primary) l c h / 0.25);
+      border-radius: var(--radius-full);
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    /* ── Page ── */
+    .page { padding-block: var(--space-8); }
+
+    /* ── Stats ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+    @media (max-width: 480px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stats .stat:last-child { grid-column: 1 / -1; }
+    }
+    .stat {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+    .stat__label {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--space-2);
+    }
+    .stat__val {
+      font-family: var(--font-mono);
+      font-size: var(--text-xl);
+      font-weight: 700;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat__val--up   { color: var(--color-success); }
+    .stat__val--down { color: var(--color-notification); }
+
+    /* ── Layout grid ── */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: var(--space-6);
+      align-items: start;
+    }
+    @media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
+
+    /* ── Monitor list ── */
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+    .list-title {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .monitor-list { display: flex; flex-direction: column; gap: var(--space-2); }
+
+    .monitor-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto auto;
+      align-items: center;
+      gap: var(--space-3);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
+      transition: border-color var(--transition-interactive);
+    }
+    .monitor-row:hover { border-color: oklch(from var(--color-text) l c h / 0.22); }
+    .monitor-row--down { border-color: oklch(from var(--color-notification) l c h / 0.4); }
+
+    .monitor-name {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 2px;
+    }
+    .monitor-url {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .monitor-checked {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+    .monitor-actions { display: flex; gap: var(--space-1); }
+
+    /* ── Toggle switch ── */
+    .toggle {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      width: 36px;
+      height: 20px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle__track {
+      position: absolute;
+      inset: 0;
+      background: var(--color-surface-dynamic);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      transition: background var(--transition-interactive), border-color var(--transition-interactive);
+    }
+    .toggle input:checked ~ .toggle__track {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+    .toggle__thumb {
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-radius: var(--radius-full);
+      transition: transform var(--transition-interactive);
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .toggle__thumb { transform: translateX(16px); }
+
+    /* ── Skeleton ── */
+    .skel-row { height: 66px; border-radius: var(--radius-lg); }
+
+    /* ── Incidents sidebar ── */
+    .incidents-title {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      margin-bottom: var(--space-3);
+    }
+    .incident-list { display: flex; flex-direction: column; gap: var(--space-2); }
+    .incident-item {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .incident-item__name { font-weight: 600; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .incident-item__meta { color: var(--color-text-muted); }
+    .incident-item__status-open     { color: var(--color-notification); }
+    .incident-item__status-resolved { color: var(--color-success); }
+
+    /* ── Modals ── */
+    .modal__title { font-family: var(--font-mono); font-size: var(--text-base); font-weight: 600; }
+
+    @media (max-width: 500px) {
+      .monitor-row { grid-template-columns: auto 1fr auto auto; }
+      .monitor-checked { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    window.SUPABASE_URL = '__SUPABASE_URL__';
+    window.SUPABASE_KEY = '__SUPABASE_PUBLISHABLE_KEY__';
+  </script>
+  <script src="assets/app.js"></script>
+  <script>AppUtils.initTheme();</script>
+
+  <!-- Top bar -->
+  <header class="topbar" role="banner">
+    <div class="container container--wide topbar__inner">
+      <a href="index.html" class="topbar__logo" aria-label="PingWatch home">
+        <svg width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect width="28" height="28" rx="6" fill="currentColor" opacity="0.08"/>
+          <circle cx="14" cy="14" r="5" stroke="currentColor" stroke-width="1.5" opacity="0.25"/>
+          <circle cx="14" cy="14" r="2.5" fill="var(--color-primary)"/>
+          <path d="M14 4v4M14 20v4M4 14h4M20 14h4" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        </svg>
+        <span class="topbar__logo-text">Ping<span>Watch</span></span>
+      </a>
+
+      <div class="topbar__right">
+        <span class="topbar__user" id="disp-email"></span>
+        <span class="ch-badge" id="disp-channel">—</span>
+        <button class="theme-toggle" data-theme-toggle onclick="AppUtils.toggleTheme()" aria-label="Toggle theme"></button>
+        <button class="btn btn-ghost btn-sm" onclick="AppUtils.signOut()">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="page">
+    <div class="container container--wide">
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat">
+          <div class="stat__label">Total</div>
+          <div class="stat__val" id="stat-total">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Online</div>
+          <div class="stat__val stat__val--up" id="stat-up">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Down</div>
+          <div class="stat__val stat__val--down" id="stat-down">—</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <!-- Monitors column -->
+        <div>
+          <div class="list-header">
+            <h1 class="list-title">Monitors</h1>
+            <button class="btn btn-primary btn-sm" onclick="AppUtils.openModal('modal-add')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add monitor
+            </button>
+          </div>
+          <div class="monitor-list" id="monitor-list" aria-live="polite">
+            <div class="skeleton skel-row"></div>
+            <div class="skeleton skel-row"></div>
+            <div class="skeleton skel-row"></div>
+          </div>
+        </div>
+
+        <!-- Incidents sidebar -->
+        <div>
+          <h2 class="incidents-title">Recent incidents</h2>
+          <div class="incident-list" id="incident-list" aria-live="polite">
+            <div class="skeleton" style="height:56px;border-radius:var(--radius-md)"></div>
+            <div class="skeleton" style="height:56px;border-radius:var(--radius-md)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add monitor modal -->
+  <div id="modal-add" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-add-title">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 class="modal__title" id="modal-add-title">Add monitor</h3>
+        <button class="btn btn-ghost btn-sm" onclick="AppUtils.closeModal('modal-add')" aria-label="Close">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label" for="add-name">Monitor name</label>
+          <input class="form-input" type="text" id="add-name" placeholder="My API" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add-url">URL</label>
+          <input class="form-input" type="url" id="add-url" placeholder="https://example.com" required />
+        </div>
+        <span class="form-error" id="add-err" hidden></span>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn-secondary btn-sm" onclick="AppUtils.closeModal('modal-add')">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="add-submit">Add monitor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirm modal -->
+  <div id="modal-del" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-del-title">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 class="modal__title" id="modal-del-title">Delete monitor</h3>
+        <button class="btn btn-ghost btn-sm" onclick="AppUtils.closeModal('modal-del')" aria-label="Close">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <p style="font-size:var(--text-sm);color:var(--color-text-muted)">
+          Delete <strong id="del-name" style="color:var(--color-text)"></strong>?
+          All incident records will also be removed. This cannot be undone.
+        </p>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn-secondary btn-sm" onclick="AppUtils.closeModal('modal-del')">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="del-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" role="status" aria-live="polite"></div>
+
+  <script>
+    let currentUser = null;
+    let monitors    = [];
+    let delTargetId = null;
+
+    /* ── Boot ── */
+    (async () => {
+      currentUser = await AppUtils.requireAuth();
+      if (!currentUser) return;
+
+      document.getElementById('disp-email').textContent = currentUser.email;
+      document.querySelector('[data-theme-toggle]').addEventListener('click', () => AppUtils.toggleTheme());
+
+      await loadProfile();
+      await loadAll();
+    })();
+
+    /* ── Profile ── */
+    async function loadProfile() {
+      const sb = AppUtils.getSupabase();
+      const { data } = await sb.from('users').select('notification_channel').eq('id', currentUser.id).single();
+      if (!data) return;
+      const icons = { telegram: '✈ telegram', discord: '◉ discord', email: '✉ email' };
+      document.getElementById('disp-channel').textContent = icons[data.notification_channel] || data.notification_channel;
+    }
+
+    /* ── Load monitors + incidents ── */
+    async function loadAll() {
+      await loadMonitors();
+      await loadIncidents();
+    }
+
+    async function loadMonitors() {
+      const sb = AppUtils.getSupabase();
+      const { data, error } = await sb
+        .from('monitors')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) { AppUtils.showToast('Could not load monitors.', 'error'); return; }
+
+      monitors = data || [];
+      renderMonitors(monitors);
+      updateStats(monitors);
+    }
+
+    function updateStats(list) {
+      document.getElementById('stat-total').textContent = list.length;
+      document.getElementById('stat-up').textContent   = list.filter(m => m.last_status === 'UP').length;
+      document.getElementById('stat-down').textContent = list.filter(m => m.last_status === 'DOWN').length;
+    }
+
+    function renderMonitors(list) {
+      const el = document.getElementById('monitor-list');
+
+      if (!list.length) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <h3>No monitors yet</h3>
+            <p>Add your first URL to start monitoring uptime.</p>
+            <button class="btn btn-primary btn-sm" onclick="AppUtils.openModal('modal-add')">Add monitor</button>
+          </div>`;
+        return;
+      }
+
+      el.innerHTML = list.map(m => {
+        const badge = m.last_status === 'UP'
+          ? `<span class="badge badge--up"><span class="badge__dot"></span>UP</span>`
+          : m.last_status === 'DOWN'
+          ? `<span class="badge badge--down"><span class="badge__dot"></span>DOWN</span>`
+          : `<span class="badge badge--unknown"><span class="badge__dot"></span>—</span>`;
+
+        return `
+        <div class="monitor-row${m.last_status === 'DOWN' ? ' monitor-row--down' : ''}" id="row-${m.id}">
+          ${badge}
+          <div style="min-width:0">
+            <div class="monitor-name" title="${esc(m.name)}">${esc(m.name)}</div>
+            <div class="monitor-url"  title="${esc(m.url)}">${esc(m.url)}</div>
+          </div>
+          <div class="monitor-checked">${AppUtils.formatRelativeTime(m.last_checked_at)}</div>
+          <label class="toggle" aria-label="Enable ${esc(m.name)}">
+            <input type="checkbox" ${m.is_active ? 'checked' : ''} onchange="toggleMonitor('${m.id}', this.checked)" />
+            <div class="toggle__track"></div>
+            <div class="toggle__thumb"></div>
+          </label>
+          <div class="monitor-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openDel('${m.id}','${escAttr(m.name)}')"
+                    aria-label="Delete ${esc(m.name)}" title="Delete">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    /* ── Incidents ── */
+    async function loadIncidents() {
+      const sb  = AppUtils.getSupabase();
+      const ids = monitors.map(m => m.id);
+      const el  = document.getElementById('incident-list');
+
+      if (!ids.length) {
+        el.innerHTML = emptyIncidents();
+        return;
+      }
+
+      const { data } = await sb
+        .from('incidents')
+        .select('*, monitors(name)')
+        .in('monitor_id', ids)
+        .order('started_at', { ascending: false })
+        .limit(15);
+
+      const list = data || [];
+      if (!list.length) { el.innerHTML = emptyIncidents(); return; }
+
+      el.innerHTML = list.map(i => {
+        const name     = i.monitors?.name || '—';
+        const started  = AppUtils.formatRelativeTime(i.started_at);
+        const resolved = i.resolved_at;
+        const dur      = i.duration_seconds ? AppUtils.formatDuration(i.duration_seconds) : null;
+        const statusEl = resolved
+          ? `<span class="incident-item__status-resolved">✓ resolved${dur ? ' — ' + dur : ''}</span>`
+          : `<span class="incident-item__status-open">● open</span>`;
+
+        return `
+        <div class="incident-item">
+          <div class="incident-item__name" title="${esc(name)}">${esc(name)}</div>
+          <div class="incident-item__meta">${started}</div>
+          <div>${statusEl}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function emptyIncidents() {
+      return `<div style="text-align:center;padding:var(--space-8) 0;color:var(--color-text-faint);font-family:var(--font-mono);font-size:var(--text-xs)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto var(--space-2)" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        No incidents
+      </div>`;
+    }
+
+    /* ── Add monitor ── */
+    document.getElementById('add-submit').addEventListener('click', async () => {
+      const btn  = document.getElementById('add-submit');
+      const errEl = document.getElementById('add-err');
+      errEl.hidden = true;
+
+      const name = document.getElementById('add-name').value.trim();
+      const url  = document.getElementById('add-url').value.trim();
+
+      if (!name) { errEl.textContent = 'Name is required.';  errEl.hidden = false; return; }
+      if (!url)  { errEl.textContent = 'URL is required.';   errEl.hidden = false; return; }
+      try { new URL(url); } catch {
+        errEl.textContent = 'Enter a valid URL (e.g. https://example.com)';
+        errEl.hidden = false;
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Adding…';
+
+      const sb = AppUtils.getSupabase();
+      const { error } = await sb.from('monitors').insert({
+        user_id:        currentUser.id,
+        name,
+        url,
+        is_active:      true,
+        last_status:    null,
+        last_checked_at: null,
+      });
+
+      btn.disabled = false;
+      btn.textContent = 'Add monitor';
+
+      if (error) { errEl.textContent = error.message; errEl.hidden = false; return; }
+
+      document.getElementById('add-name').value = '';
+      document.getElementById('add-url').value  = '';
+      AppUtils.closeModal('modal-add');
+      AppUtils.showToast('Monitor added!', 'success');
+      await loadAll();
+    });
+
+    /* ── Toggle active ── */
+    async function toggleMonitor(id, isActive) {
+      const sb = AppUtils.getSupabase();
+      const { error } = await sb.from('monitors').update({ is_active: isActive }).eq('id', id);
+      if (error) { AppUtils.showToast('Update failed.', 'error'); await loadAll(); return; }
+      AppUtils.showToast(isActive ? 'Monitor enabled.' : 'Monitor paused.', 'success');
+    }
+
+    /* ── Delete monitor ── */
+    function openDel(id, name) {
+      delTargetId = id;
+      document.getElementById('del-name').textContent = name;
+      AppUtils.openModal('modal-del');
+    }
+
+    document.getElementById('del-confirm').addEventListener('click', async () => {
+      if (!delTargetId) return;
+      const btn = document.getElementById('del-confirm');
+      btn.disabled = true;
+      btn.textContent = 'Deleting…';
+
+      const sb = AppUtils.getSupabase();
+      await sb.from('incidents').delete().eq('monitor_id', delTargetId);
+      const { error } = await sb.from('monitors').delete().eq('id', delTargetId);
+
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+      AppUtils.closeModal('modal-del');
+
+      if (error) { AppUtils.showToast('Delete failed.', 'error'); return; }
+
+      delTargetId = null;
+      AppUtils.showToast('Deleted.', 'success');
+      await loadAll();
+    });
+
+    /* ── Helpers ── */
+    function esc(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(s) { return String(s).replace(/'/g,"\\'"); }
+
+    // Auto-refresh every 60s
+    setInterval(loadAll, 60000);
+  </script>
+</body>
+</html>
