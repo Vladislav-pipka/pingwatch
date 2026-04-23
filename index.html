@@ -234,7 +234,12 @@
     window.SUPABASE_KEY = 'sb_publishable_5_Ti0Tdab5FAGcaLCOPjnQ_JOMI_AIf';
   </script>
   <script src="assets/app.js"></script>
-  <script>AppUtils.initTheme();</script>
+  <script>
+    AppUtils.initTheme();
+    document.addEventListener('DOMContentLoaded', () => {
+      AppUtils.initTheme();
+    });
+  </script>
 
   <!-- Navbar -->
   <header class="navbar" role="banner">
