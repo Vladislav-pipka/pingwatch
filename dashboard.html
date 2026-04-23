@@ -396,7 +396,7 @@
       const sb = AppUtils.getSupabase();
       const { data } = await sb.from('users').select('notification_channel').eq('id', currentUser.id).single();
       if (!data) return;
-      const icons = { telegram: '✈ telegram', discord: '◉ discord', email: '✉ email' };
+      const icons = { telegram: 'telegram', discord: 'discord', email: '✉ email' };
       document.getElementById('disp-channel').textContent = icons[data.notification_channel] || data.notification_channel;
     }
 
