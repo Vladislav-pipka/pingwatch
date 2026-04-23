@@ -534,14 +534,14 @@
         const { data, error } = await sb.auth.signUp({ email, password: pass });
         if (error) throw error;
 
-        const { error: pe } = await sb.from('users').upsert({
-          id:                   data.user.id,
-          email,
+        await new Promise(r => setTimeout(r, 800));
+
+        const { error: pe } = await sb.from('users').update({
           notification_channel: channel,
           telegram_chat_id:     channel === 'telegram' ? tgId      : null,
           discord_webhook_url:  channel === 'discord'  ? discord   : null,
           notification_email:   channel === 'email'    ? notifEmail: null,
-        });
+        }).eq('id', data.user.id);
         if (pe) throw pe;
 
         AppUtils.showToast('Account created!', 'success');
