@@ -457,7 +457,7 @@
             <div class="monitor-name" title="${esc(m.name)}">${esc(m.name)}</div>
             <div class="monitor-url"  title="${esc(m.url)}">${esc(m.url)}</div>
           </div>
-          <div class="monitor-checked">${AppUtils.formatRelativeTime(m.last_checked_at)}</div>
+          <div class="monitor-checked">Last pinged: ${AppUtils.formatRelativeTime(m.last_checked_at)}</div>
           <label class="toggle" aria-label="Enable ${esc(m.name)}">
             <input type="checkbox" ${m.is_active ? 'checked' : ''} onchange="toggleMonitor('${m.id}', this.checked)" />
             <div class="toggle__track"></div>
