@@ -236,9 +236,6 @@
   <script src="assets/app.js"></script>
   <script>
     AppUtils.initTheme();
-    document.addEventListener('DOMContentLoaded', () => {
-      AppUtils.initTheme();
-    });
   </script>
 
   <!-- Navbar -->
@@ -469,9 +466,6 @@
         if (session) document.getElementById('nav-dashboard').style.display = 'inline-flex';
       } catch(_) {}
     })();
-
-    // Theme toggle button init
-    document.querySelector('[data-theme-toggle]').addEventListener('click', () => AppUtils.toggleTheme());
 
     // Tabs
     const tabReg   = document.getElementById('tab-reg');
