@@ -1,9 +1,7 @@
 {
-  "name": "pingwatch",
-  "version": "1.0.0",
-  "private": true,
   "dependencies": {
-    "nodemailer": "^6.9.13",
-    "@supabase/supabase-js": "^2.43.4"
+    "@supabase/supabase-js": "^2.105.1",
+    "nodemailer": "^8.0.7",
+    "stripe": "^22.1.0"
   }
 }
