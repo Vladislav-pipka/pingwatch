@@ -320,6 +320,7 @@
                     <select class="form-select" id="reg-channel">
                       <option value="telegram">Telegram</option>
                       <option value="discord">Discord</option>
+                      <option value="slack">Slack</option>
                       <option value="email">Email</option>
                     </select>
                   </div>
@@ -341,6 +342,16 @@
                     <span class="hint" style="display:block;background:oklch(0.85 0.12 85 / 0.15);border:1px solid oklch(0.75 0.12 85 / 0.4);border-radius:6px;padding:8px 10px;color:var(--color-text)">
   ⚠️ <strong>Important:</strong> Use your <strong>OWN</strong> Discord server.<br>
   Server Settings → Integrations → Webhooks → New Webhook → Copy URL
+                    </span>
+                  </div>
+
+                  <!-- Slack -->
+                  <div class="form-group channel-extra" id="extra-slack">
+                    <label class="form-label" for="reg-slack">Slack Webhook URL</label>
+                    <input class="form-input" type="url" id="reg-slack" placeholder="https://hooks.slack.com/services/…"/>
+                    <span class="hint" style="display:block;background:oklch(0.85 0.12 85 / 0.15);border:1px solid oklch(0.75 0.12 85 / 0.4);border-radius:6px;padding:8px 10px;color:var(--color-text)">
+  ⚠️ <strong>Important:</strong> Use your <strong>OWN</strong> Slack workspace.<br>
+  api.slack.com/apps → Your App → Incoming Webhooks → Add New Webhook → Copy URL
                     </span>
                   </div>
 
@@ -479,6 +490,7 @@
       document.getElementById('extra-telegram').classList.toggle('visible', v === 'telegram');
       document.getElementById('extra-discord').classList.toggle('visible', v === 'discord');
       document.getElementById('extra-email').classList.toggle('visible', v === 'email');
+      document.getElementById('extra-slack').classList.toggle('visible', v === 'slack');
     }
     channelSelect.addEventListener('change', syncChannelFields);
 
@@ -506,12 +518,14 @@
       const channel = channelSelect.value;
       const tgId    = document.getElementById('reg-tg').value.trim();
       const discord = document.getElementById('reg-discord').value.trim();
+      const slackUrl   = document.getElementById('reg-slack').value.trim();
       const notifEmail = document.getElementById('reg-notif-email').value.trim();
 
       if (!email || !pass) { setErr('reg-err', 'Email and password are required.'); return; }
       if (pass.length < 8) { setErr('reg-err', 'Password must be at least 8 characters.'); return; }
       if (channel === 'telegram' && !tgId)      { setErr('reg-err', 'Enter your Telegram Chat ID.'); return; }
       if (channel === 'discord'  && !discord)   { setErr('reg-err', 'Enter your Discord Webhook URL.'); return; }
+      if (channel === 'slack'    && !slackUrl)  { setErr('reg-err', 'Enter your Slack Webhook URL.'); return; }
       if (channel === 'email'    && !notifEmail){ setErr('reg-err', 'Enter your notification email.'); return; }
 
       setBtnState('reg-btn', true, 'Create account');
@@ -527,6 +541,7 @@
           notification_channel: channel,
           telegram_chat_id:     channel === 'telegram' ? tgId      : null,
           discord_webhook_url:  channel === 'discord'  ? discord   : null,
+          slack_webhook_url:    channel === 'slack'    ? slackUrl   : null,
           notification_email:   channel === 'email'    ? notifEmail: null,
         }).eq('id', data.user.id);
         if (pe) throw pe;
