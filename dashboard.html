@@ -235,6 +235,28 @@
       .monitor-row { grid-template-columns: auto 1fr auto auto; }
       .monitor-checked { display: none; }
     }
+
+    .plan-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+}
+    .plan-banner__info { display: flex; flex-direction: column; gap: 4px; }
+    .plan-banner__label { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+    .plan-banner__name { font-family: var(--font-mono); font-size: 15px; font-weight: 700; }
+    .plan-banner__limit { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-muted); }
+    .plan-banner__bar-wrap { flex: 1; max-width: 160px; display: flex; flex-direction: column; gap: 4px; }
+    .plan-banner__bar-track { height: 4px; background: var(--color-border); border-radius: 99px; overflow: hidden; }
+    .plan-banner__bar-fill { height: 100%; background: var(--color-primary); border-radius: 99px; transition: width 0.4s; }
+    .plan-banner__bar-fill--warn { background: #f59e0b; }
+    .plan-banner__bar-fill--full { background: var(--color-notification); }
+    .plan-banner__bar-label { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted); }
   </style>
 </head>
 <body>
@@ -277,7 +299,22 @@
 
   <main id="main" class="page">
     <div class="container container--wide">
+      
 
+      <div class="plan-banner">
+        <div class="plan-banner__info">
+          <div class="plan-banner__label">Current plan</div>
+          <div class="plan-banner__name" id="plan-name">Free plan</div>
+          <div class="plan-banner__limit" id="plan-limit">Up to 2 monitors</div>
+        </div>
+        <div class="plan-banner__bar-wrap" id="plan-bar-wrap">
+          <div class="plan-banner__bar-track">
+            <div class="plan-banner__bar-fill" id="plan-bar" style="width:0%"></div>
+          </div>
+          <div class="plan-banner__bar-label" id="plan-bar-label">0 / 2 monitors used</div>
+        </div>
+        <a href="pricing.html" class="btn btn-primary btn-sm" id="plan-upgrade-btn">Upgrade →</a>
+      </div>
       <!-- Stats -->
       <div class="stats">
         <div class="stat">
@@ -378,6 +415,7 @@
     let currentUser = null;
     let monitors    = [];
     let delTargetId = null;
+    let userPlan = 'free';
 
     /* ── Boot ── */
     (async () => {
@@ -394,10 +432,11 @@
     /* ── Profile ── */
     async function loadProfile() {
       const sb = AppUtils.getSupabase();
-      const { data } = await sb.from('users').select('notification_channel').eq('id', currentUser.id).single();
+      const { data } = await sb.from('users').select('notification_channel, plan').eq('id', currentUser.id).single();
       if (!data) return;
       const icons = { telegram: 'telegram', discord: 'discord', email: '✉ email' };
       document.getElementById('disp-channel').textContent = icons[data.notification_channel] || data.notification_channel;
+      userPlan = data.plan || 'free';
     }
 
     /* ── Load monitors + incidents ── */
@@ -425,6 +464,28 @@
       document.getElementById('stat-total').textContent = list.length;
       document.getElementById('stat-up').textContent   = list.filter(m => m.last_status === 'UP').length;
       document.getElementById('stat-down').textContent = list.filter(m => m.last_status === 'DOWN').length;
+      updatePlanBanner(list.length);
+    }
+
+    function updatePlanBanner(used) {
+      let maxM, planLabel, limitLabel;
+      if (userPlan === 'pro') { maxM = 10; planLabel = 'Pro'; limitLabel = 'Up to 10 monitors'; }
+      else if (userPlan === 'unlimited') { maxM = Infinity; planLabel = 'Unlimited'; limitLabel = 'Unlimited monitors'; }
+      else { maxM = 2; planLabel = 'Free'; limitLabel = 'Up to 2 monitors'; }
+
+      document.getElementById('plan-name').textContent  = planLabel + ' plan';
+      document.getElementById('plan-limit').textContent = limitLabel;
+
+      if (maxM === Infinity) {
+        document.getElementById('plan-bar-wrap').style.display    = 'none';
+        document.getElementById('plan-upgrade-btn').style.display = 'none';
+        return;
+      }
+      const pct = Math.min(100, Math.round((used / maxM) * 100));
+      const bar = document.getElementById('plan-bar');
+      bar.style.width = pct + '%';
+      bar.className = 'plan-banner__bar-fill' + (pct >= 100 ? ' plan-banner__bar-fill--full' : pct >= 80 ? ' plan-banner__bar-fill--warn' : '');
+      document.getElementById('plan-bar-label').textContent = used + ' / ' + maxM + ' monitors used';
     }
 
     function renderMonitors(list) {
