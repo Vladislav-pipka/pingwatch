@@ -7,7 +7,7 @@ exports.handler = async (event) => {
 
   try {
     const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-    const { plan, userId } = JSON.parse(event.body);
+    const { plan, user_id, email } = JSON.parse(event.body);
 
     const PRICE_IDS = {
       pro: 'price_1TS0fHH7w95uyPVpwlIDBr7R',
@@ -23,10 +23,14 @@ exports.handler = async (event) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
+      customer_email: email || undefined,
       line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
-      success_url: 'https://pingwatch.netlify.app/dashboard?subscribed=true',
-      cancel_url: 'https://pingwatch.netlify.app/pricing',
-      metadata: { userId: userId || '' },
+      success_url: 'https://pingwatch.netlify.app/dashboard.html?subscribed=true',
+      cancel_url: 'https://pingwatch.netlify.app/pricing.html',
+      metadata: {
+        userId: user_id || '',
+        plan: plan || 'free',
+      },
     });
 
     return {
