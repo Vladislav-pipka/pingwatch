@@ -7,11 +7,6 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY
 );
 
-const PLAN_MAP = {
-  'price_1TS0fHH7w95uyPVpwlIDBr7R': 'pro',
-  'price_1TS0frH7w95uyPVpqseFCoQz': 'unlimited',
-};
-
 exports.handler = async (event) => {
   const sig = event.headers['stripe-signature'];
   let stripeEvent;
@@ -31,18 +26,17 @@ exports.handler = async (event) => {
     const userId = session.metadata?.userId;
     const customerId = session.customer;
     const subscriptionId = session.subscription;
-
-    // Get the price ID from the subscription
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    const priceId = subscription.items.data[0].price.id;
-    const plan = PLAN_MAP[priceId] || 'free';
+    const plan = session.metadata?.plan || 'free';
 
     if (userId) {
-      await supabase.from('users').update({
-        plan,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
-      }).eq('id', userId);
+      await supabase
+        .from('users')
+        .update({
+          plan,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+        })
+        .eq('id', userId);
     }
   }
 
@@ -50,7 +44,8 @@ exports.handler = async (event) => {
     const subscription = stripeEvent.data.object;
     const customerId = subscription.customer;
 
-    await supabase.from('users')
+    await supabase
+      .from('users')
       .update({ plan: 'free', stripe_subscription_id: null })
       .eq('stripe_customer_id', customerId);
   }
