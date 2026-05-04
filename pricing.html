@@ -138,7 +138,7 @@
       <li>Email alerts</li>
       <li>Telegram / Discord / Slack</li>
     </ul>
-    <a href="/dashboard.html" class="btn btn-outline">Get started free</a>
+    <a href="/dashboard.html" class="btn btn-outline" id="btn-free">Get started free</a>
   </div>
 
   <!-- Pro -->
@@ -154,7 +154,7 @@
       <li>Telegram / Discord / Slack</li>
       <li>Priority support</li>
     </ul>
-    <button class="btn btn-primary" onclick="subscribe('pro')">Get Pro</button>
+    <button class="btn btn-primary" id="btn-pro" onclick="subscribe('pro')">Get Pro</button>
   </div>
 
   <!-- Unlimited -->
@@ -169,7 +169,7 @@
       <li>Telegram / Discord / Slack</li>
       <li>Priority support</li>
     </ul>
-    <button class="btn btn-primary" onclick="subscribe('unlimited')">Get Unlimited</button>
+    <button class="btn btn-primary" id="btn-unlimited" onclick="subscribe('unlimited')">Get Unlimited</button>
   </div>
 
 </div>
@@ -185,8 +185,58 @@
     'sb_publishable_5_Ti0Tdab5FAGcaLCOPjnQ_JOMI_AIf'
   );
 
+  let currentPlan = null;
+
+  // Загружаем план пользователя при загрузке страницы
+  (async () => {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return;
+
+    const { data } = await _supabase
+      .from('users')
+      .select('plan, stripe_customer_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!data) return;
+    currentPlan = data.plan || 'free';
+    renderPlanButtons(currentPlan, data.stripe_customer_id);
+  })();
+
+  function renderPlanButtons(plan, customerId) {
+    // Free кнопка
+    const freeBtn = document.getElementById('btn-free');
+    if (plan === 'free') {
+      freeBtn.textContent = 'Current plan';
+      freeBtn.disabled = true;
+      freeBtn.style.opacity = '0.5';
+      freeBtn.style.cursor = 'default';
+    }
+
+    // Pro кнопка
+    const proBtn = document.getElementById('btn-pro');
+    if (plan === 'pro') {
+      proBtn.textContent = '✓ Current plan';
+      proBtn.disabled = true;
+      proBtn.style.opacity = '0.5';
+      proBtn.style.cursor = 'default';
+    } else if (plan === 'unlimited') {
+      proBtn.textContent = 'Downgrade';
+      proBtn.onclick = () => openPortal(customerId);
+    }
+
+    // Unlimited кнопка
+    const unlimitedBtn = document.getElementById('btn-unlimited');
+    if (plan === 'unlimited') {
+      unlimitedBtn.textContent = '✓ Current plan';
+      unlimitedBtn.disabled = true;
+      unlimitedBtn.style.opacity = '0.5';
+      unlimitedBtn.style.cursor = 'default';
+    }
+  }
+
   async function subscribe(plan) {
-    const { data: { session  } } = await _supabase.auth.getSession();
+    const { data: { session } } = await _supabase.auth.getSession();
     if (!session) {
       window.location.href = '/index.html';
       return;
@@ -202,19 +252,21 @@
       })
     });
 
-    const text = await res.text();
-    const data = text ? JSON.parse(text) : {};
-
-    if (!res.ok) {
-      alert(data.error || 'Checkout failed');
-      return;
-    }
-
+    const data = await res.json();
     if (data.url) {
       window.location.href = data.url;
     } else {
-      alert('No checkout URL returned');
+      alert(data.error || 'Checkout failed');
     }
+  }
+
+  async function openPortal(customerId) {
+    const res = await fetch('/.netlify/functions/create-portal-session', {
+      method: 'POST',
+      body: JSON.stringify({ customer_id: customerId }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
   }
 </script>
 
