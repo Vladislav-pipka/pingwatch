@@ -592,6 +592,13 @@
       const name = document.getElementById('add-name').value.trim();
       const url  = document.getElementById('add-url').value.trim();
 
+      const maxAllowed = userPlan === 'pro' ? 10 : userPlan === 'unlimited' ? Infinity : 2;
+      if (monitors.length >= maxAllowed) {
+        errEl.textContent = 'Monitor limit reached. Upgrade to add more monitors.';
+        errEl.hidden = false;
+        return;
+      }
+      
       if (!name) { errEl.textContent = 'Name is required.';  errEl.hidden = false; return; }
       if (!url)  { errEl.textContent = 'URL is required.';   errEl.hidden = false; return; }
       try { new URL(url); } catch {
