@@ -292,6 +292,7 @@
         <span class="topbar__user" id="disp-email"></span>
         <span class="ch-badge" id="disp-channel">—</span>
         <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+        <button class="btn btn-ghost btn-sm" id="manage-btn" onclick="openPortal()">Manage plan</button>
         <button class="btn btn-ghost btn-sm" onclick="AppUtils.signOut()">Sign out</button>
       </div>
     </div>
@@ -678,6 +679,40 @@
 
     // Auto-refresh every 60s
     setInterval(loadAll, 60000);
+    async function openPortal() {
+      const btn = document.getElementById('manage-btn');
+      btn.disabled = true;
+      btn.textContent = 'Loading…';
+
+      const sb = AppUtils.getSupabase();
+      const { data } = await sb
+        .from('users')
+        .select('stripe_customer_id')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (!data?.stripe_customer_id) {
+        AppUtils.showToast('No active subscription found.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Manage plan';
+        return;
+      }
+
+      const res = await fetch('/.netlify/functions/create-portal-session', {
+        method: 'POST',
+        body: JSON.stringify({ customer_id: data.stripe_customer_id }),
+      });
+
+      const json = await res.json();
+      btn.disabled = false;
+      btn.textContent = 'Manage plan';
+
+      if (json.url) {
+        window.location.href = json.url;
+      } else {
+        AppUtils.showToast('Could not open portal.', 'error');
+      }
+    }
   </script>
 </body>
 </html>
