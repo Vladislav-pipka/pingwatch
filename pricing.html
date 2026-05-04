@@ -186,8 +186,8 @@
   );
 
   async function subscribe(plan) {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) {
+    const { data: { session  } } = await _supabase.auth.getSession();
+    if (!session) {
       window.location.href = '/index.html';
       return;
     }
@@ -195,17 +195,29 @@
     const res = await fetch('/.netlify/functions/create-checkout-session-2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, userId: user.id }),
+      body: JSON.stringify({
+        plan,
+        user_id: session.user.id,
+        email: session.user.email
+      })
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!res.ok) {
+      alert(data.error || 'Checkout failed');
+      return;
+    }
+
     if (data.url) {
       window.location.href = data.url;
     } else {
-      alert('Error: ' + (data.error || 'Unknown error'));
+      alert('No checkout URL returned');
     }
   }
 </script>
 
 </body>
 </html>
+ 
