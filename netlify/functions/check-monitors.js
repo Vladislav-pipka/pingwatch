@@ -1,6 +1,21 @@
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
-
+function formatTime(date, timeZone) {
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: timeZone || 'UTC',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(date) + ` (${timeZone || 'UTC'})`;
+  } catch {
+    return date.toUTCString();
+  }
+}
 /* ── Fetch with timeout ── */
 async function ping(url, timeoutMs = 12000) {
   const ctrl = new AbortController();
@@ -62,11 +77,11 @@ async function notifyEmail(to, subject, text) {
 }
 
 /* ── Dispatch alert to correct channel ── */
-async function sendAlert({ channel, telegramChatId, discordWebhookUrl, notificationEmail }, monitor, isDown) {
+async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebhookUrl, notificationEmail, timezone }, monitor, isDown) {
   const label    = isDown ? '🔴 DOWN' : '🟢 BACK UP';
-  const mdText   = `*${monitor.name}* is ${label}\nURL: \`${monitor.url}\`\n🕐 ${new Date().toUTCString()}`;
-  const plainText = `${monitor.name} is ${label}\nURL: ${monitor.url}\nTime: ${new Date().toUTCString()}`;
-
+  const localTime = formatTime(new Date(), timezone);
+  const mdText = `*${monitor.name}* is ${label}\nURL: \`${monitor.url}\`\n🕐 ${localTime}`;
+  const plainText = `${monitor.name} is ${label}\nURL: ${monitor.url}\nTime: ${localTime}`;
   try {
     if (channel === 'telegram') {
       const token  = process.env.TELEGRAM_BOT_TOKEN;
@@ -112,7 +127,9 @@ exports.handler = async function () {
         notification_channel,
         telegram_chat_id,
         discord_webhook_url,
-        notification_email
+        slack_webhook_url,
+        notification_email,
+        timezone
       )
     `)
     .eq('is_active', true);
@@ -156,7 +173,9 @@ exports.handler = async function () {
             channel:            user.notification_channel || 'telegram',
             telegramChatId:     user.telegram_chat_id,
             discordWebhookUrl:  user.discord_webhook_url,
+            slackWebhookUrl: user.slack_webhook_url,
             notificationEmail:  user.notification_email,
+            timezone: user.timezone || 'UTC',
           };
 
           if (newStatus === 'DOWN') {
