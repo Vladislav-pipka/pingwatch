@@ -433,6 +433,8 @@
     /* ── Profile ── */
     async function loadProfile() {
       const sb = AppUtils.getSupabase();
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await sb.from('users').update({ timezone: tz }).eq('id', currentUser.id);
       const { data } = await sb.from('users').select('notification_channel, plan').eq('id', currentUser.id).single();
       if (!data) return;
       const icons = { telegram: 'telegram', discord: 'discord', email: '✉ email' };
