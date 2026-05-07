@@ -1,0 +1,21 @@
+# PingWatch
+
+PingWatch is an uptime monitoring SaaS that checks your websites every minute
+and sends instant alerts when they go down.
+
+## What it does
+- Monitors website uptime 24/7
+- Sends instant alerts via Telegram, Discord, Slack, or Email
+- Tracks incident history and downtime duration
+- Free plan available, no credit card required
+
+## Who it's for
+Developers, indie hackers, and small businesses who need to know
+immediately when their website or API goes down.
+
+## Pricing
+- Free: basic monitoring
+- Paid plans: more monitors and faster checks
+
+## URL
+https://pingwatch.netlify.app
