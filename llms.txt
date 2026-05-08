@@ -26,6 +26,8 @@ It helps developers, indie hackers, and small SaaS teams know immediately when a
 - https://pingwatch.netlify.app/
 - https://pingwatch.netlify.app/pricing.html
 - https://pingwatch.netlify.app/telegram-alerts.html
+- https://pingwatch.netlify.app/free-uptime-monitoring.html
+- https://pingwatch.netlify.app/api-uptime-monitoring.html
 
 ## Short description
 PingWatch checks your website or API automatically and sends instant alerts when it goes down.
