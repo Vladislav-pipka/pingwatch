@@ -19,4 +19,15 @@
     <priority>0.7</priority>
   </url>
 
+  <url>
+    <loc>https://pingwatch.netlify.app/free-uptime-monitoring.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://pingwatch.netlify.app/api-uptime-monitoring.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>
