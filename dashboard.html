@@ -379,6 +379,11 @@
         <div class="form-group">
           <label class="form-label" for="add-url">URL</label>
           <input class="form-input" type="url" id="add-url" placeholder="https://example.com" required />
+          <p style="font-size:0.8rem; color:var(--color-text-muted); margin-top:6px;">
+            ⚠️ If your site uses Cloudflare or similar protection, whitelist
+            <code style="background:var(--color-surface-offset); padding:1px 5px; border-radius:4px;">pingwatch.netlify.app</code>
+            to avoid false DOWN alerts.
+          </p>
         </div>
         <span class="form-error" id="add-err" hidden></span>
       </div>
