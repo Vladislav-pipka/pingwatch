@@ -25,10 +25,12 @@ async function ping(url, timeoutMs = 12000) {
       method: 'GET',
       signal: ctrl.signal,
       redirect: 'follow',
-      headers: { 'User-Agent': 'PingWatch/1.0 uptime-monitor' },
-    });
-    clearTimeout(timer);
-    return { up: res.ok, status: res.status };
+      headers: {
+        'User-Agent': 'PingWatch/1.0 (+https://pingwatch.netlify.app)',
+        'Accept': 'text/html,application/xhtml+xml,...',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      const up = res.status < 500; // UP при всём что ниже 500
   } catch (err) {
     clearTimeout(timer);
     return { up: false, status: 0, errMsg: err.message };
