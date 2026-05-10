@@ -1,26 +1,83 @@
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 
-/* â”€â”€ Fetch with timeout â”€â”€ */
+function formatTime(date, timeZone) {
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: timeZone || 'UTC',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(date) + ` (${timeZone || 'UTC'})`;
+  } catch {
+    return date.toUTCString();
+  }
+}
+
+function classifyFailure(status, errMsg) {
+  const msg = (errMsg || '').toLowerCase();
+
+  if (status === 401 || status === 403) return { reason: 'Access denied',        details: `HTTP ${status}` };
+  if (status === 404)                   return { reason: 'Page not found',        details: 'HTTP 404' };
+  if (status === 429)                   return { reason: 'Rate limited',           details: 'HTTP 429 — Too Many Requests' };
+  if (status === 500)                   return { reason: 'Internal server error',  details: 'HTTP 500' };
+  if (status === 502)                   return { reason: 'Bad gateway',            details: 'HTTP 502' };
+  if (status === 503)                   return { reason: 'Service unavailable',    details: 'HTTP 503' };
+  if (status === 504)                   return { reason: 'Gateway timeout',        details: 'HTTP 504' };
+  if (status >= 500)                    return { reason: 'Server error',           details: `HTTP ${status}` };
+
+  if (msg.includes('aborted') || msg.includes('timeout'))
+    return { reason: 'Request timeout',    details: 'The server took too long to respond (>12s)' };
+  if (msg.includes('enotfound') || msg.includes('getaddrinfo') || msg.includes('dns'))
+    return { reason: 'DNS failure',        details: 'Domain could not be resolved' };
+  if (msg.includes('certificate') || msg.includes('ssl') || msg.includes('tls') || msg.includes('cert'))
+    return { reason: 'SSL / TLS error',    details: 'Certificate or TLS handshake problem' };
+  if (msg.includes('econnrefused') || msg.includes('refused'))
+    return { reason: 'Connection refused', details: 'The server refused the connection' };
+  if (msg.includes('econnreset') || msg.includes('reset'))
+    return { reason: 'Connection reset',   details: 'The server closed the connection unexpectedly' };
+
+  return { reason: 'Connection failed', details: errMsg || 'Unknown error' };
+}
+
 async function ping(url, timeoutMs = 12000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
+    const started = Date.now();
     const res = await fetch(url, {
       method: 'GET',
       signal: ctrl.signal,
       redirect: 'follow',
-      headers: { 'User-Agent': 'PingWatch/1.0 uptime-monitor' },
+      headers: {
+        'User-Agent': 'PingWatch/1.0 (+https://pingwatch.netlify.app)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
     });
     clearTimeout(timer);
-    return { up: res.ok, status: res.status };
+
+    const responseTime = Date.now() - started;
+    const up = res.status < 500;
+
+    if (up) {
+      return { up: true, status: res.status, responseTime, reason: null, details: null };
+    }
+
+    const failure = classifyFailure(res.status);
+    return { up: false, status: res.status, responseTime, reason: failure.reason, details: failure.details };
+
   } catch (err) {
     clearTimeout(timer);
-    return { up: false, status: 0, errMsg: err.message };
+    const failure = classifyFailure(0, err.message);
+    return { up: false, status: 0, responseTime: null, errMsg: err.message, reason: failure.reason, details: failure.details };
   }
 }
 
-/* â”€â”€ Notification senders â”€â”€ */
 async function notifyTelegram(token, chatId, text) {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
@@ -61,23 +118,23 @@ async function notifyEmail(to, subject, text) {
   });
 }
 
-async function notifySlack(webhookUrl, text) {
-  const res = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Slack ${res.status}: ${body}`);
-  }
-}
+async function sendAlert(
+  { channel, telegramChatId, discordWebhookUrl, slackWebhookUrl, notificationEmail, timezone },
+  monitor,
+  isDown,
+  checkResult
+) {
+  const label     = isDown ? '🔴 DOWN' : '🟢 BACK UP';
+  const localTime = formatTime(new Date(), timezone);
 
-/* â”€â”€ Dispatch alert to correct channel â”€â”€ */
-async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebhookUrl, notificationEmail }, monitor, isDown) {
-  const label    = isDown ? 'ðŸ”´ DOWN' : 'ðŸŸ¢ BACK UP';
-  const mdText   = `*${monitor.name}* is ${label}\nURL: \`${monitor.url}\`\nðŸ• ${new Date().toUTCString()}`;
-  const plainText = `${monitor.name} is ${label}\nURL: ${monitor.url}\nTime: ${new Date().toUTCString()}`;
+  const reasonLines = (isDown && checkResult && checkResult.reason)
+    ? `\n⚠️ Reason: ${checkResult.reason}` +
+      (checkResult.details ? `\n📋 Details: ${checkResult.details}` : '') +
+      (checkResult.status  ? `\n🔢 Status: ${checkResult.status}`   : '')
+    : '';
+
+  const mdText    = `*${monitor.name}* is ${label}\nURL: \`${monitor.url}\`${reasonLines}\n🕐 ${localTime}`;
+  const plainText = `${monitor.name} is ${label}\nURL: ${monitor.url}${reasonLines}\nTime: ${localTime}`;
 
   try {
     if (channel === 'telegram') {
@@ -85,15 +142,9 @@ async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebh
       const chatId = telegramChatId || process.env.TELEGRAM_CHAT_ID;
       if (!token || !chatId) throw new Error('Telegram config missing');
       await notifyTelegram(token, chatId, mdText);
-
     } else if (channel === 'discord') {
       if (!discordWebhookUrl) throw new Error('Discord webhook URL not configured for this user');
       await notifyDiscord(discordWebhookUrl, plainText);
-
-    } else if (channel === 'slack') {
-      if (!slackWebhookUrl) throw new Error('Slack webhook URL not configured for this user');
-      await notifySlack(slackWebhookUrl, plainText);
-
     } else if (channel === 'email') {
       if (!notificationEmail) throw new Error('Notification email not configured for this user');
       const subject = `PingWatch: ${monitor.name} is ${isDown ? 'DOWN' : 'back UP'}`;
@@ -102,12 +153,10 @@ async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebh
 
     console.log(`[ALERT] channel=${channel} monitor="${monitor.name}" status=${isDown ? 'DOWN' : 'UP'}`);
   } catch (err) {
-    // Alert failure must not stop the check loop
     console.error(`[ALERT ERROR] monitor="${monitor.name}" channel=${channel}: ${err.message}`);
   }
 }
 
-/* â”€â”€ Main scheduled handler â”€â”€ */
 exports.handler = async function () {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SECRET_KEY;
@@ -119,7 +168,6 @@ exports.handler = async function () {
 
   const sb = createClient(supabaseUrl, supabaseKey);
 
-  /* Fetch all active monitors with their owner's notification settings */
   const { data: monitors, error: fetchErr } = await sb
     .from('monitors')
     .select(`
@@ -129,7 +177,8 @@ exports.handler = async function () {
         telegram_chat_id,
         discord_webhook_url,
         slack_webhook_url,
-        notification_email
+        notification_email,
+        timezone
       )
     `)
     .eq('is_active', true);
@@ -147,17 +196,16 @@ exports.handler = async function () {
   const now     = new Date().toISOString();
   const results = [];
 
-  /* Process in batches of 10 to avoid hitting rate limits */
   const BATCH = 10;
   for (let i = 0; i < monitors.length; i += BATCH) {
     await Promise.all(
       monitors.slice(i, i + BATCH).map(async (monitor) => {
-        const { up } = await ping(monitor.url);
-        const newStatus  = up ? 'UP' : 'DOWN';
-        const prevStatus = monitor.last_status;
-        const changed    = prevStatus !== newStatus;
+        const checkResult = await ping(monitor.url);
+        const { up }      = checkResult;
+        const newStatus   = up ? 'UP' : 'DOWN';
+        const prevStatus  = monitor.last_status;
+        const changed     = prevStatus !== newStatus;
 
-        /* Always update last_status + last_checked_at */
         const { error: updateErr } = await sb
           .from('monitors')
           .update({ last_status: newStatus, last_checked_at: now })
@@ -170,15 +218,15 @@ exports.handler = async function () {
         if (changed) {
           const user = monitor.users || {};
           const notifParams = {
-            channel:            user.notification_channel || 'telegram',
-            telegramChatId:     user.telegram_chat_id,
-            discordWebhookUrl:  user.discord_webhook_url,
+            channel:           user.notification_channel || 'telegram',
+            telegramChatId:    user.telegram_chat_id,
+            discordWebhookUrl: user.discord_webhook_url,
             slackWebhookUrl:   user.slack_webhook_url,
-            notificationEmail:  user.notification_email,
+            notificationEmail: user.notification_email,
+            timezone:          user.timezone || 'UTC',
           };
 
           if (newStatus === 'DOWN') {
-            /* Open incident */
             const { error: incErr } = await sb.from('incidents').insert({
               monitor_id:       monitor.id,
               started_at:       now,
@@ -187,11 +235,9 @@ exports.handler = async function () {
             });
             if (incErr) console.error(`[INCIDENT OPEN ERR] ${incErr.message}`);
 
-            /* Send DOWN alert */
-            await sendAlert(notifParams, monitor, true);
+            await sendAlert(notifParams, monitor, true, checkResult);
 
           } else if (newStatus === 'UP' && prevStatus === 'DOWN') {
-            /* Resolve the most recent open incident */
             const { data: openInc } = await sb
               .from('incidents')
               .select('id, started_at')
@@ -213,14 +259,13 @@ exports.handler = async function () {
               if (resolveErr) console.error(`[INCIDENT CLOSE ERR] ${resolveErr.message}`);
             }
 
-            /* Send RECOVERY alert */
-            await sendAlert(notifParams, monitor, false);
+            await sendAlert(notifParams, monitor, false, checkResult);
           }
         }
 
-        const line = `[CHECK] "${monitor.name}" â†’ ${newStatus}${changed ? ' (CHANGED)' : ''}`;
-        console.log(line);
-        results.push({ name: monitor.name, status: newStatus, changed });
+        const reasonTag = (!up && checkResult.reason) ? ` | ${checkResult.reason}` : '';
+        console.log(`[CHECK] "${monitor.name}" → ${newStatus}${changed ? ' (CHANGED)' : ''}${reasonTag}`);
+        results.push({ name: monitor.name, status: newStatus, changed, reason: checkResult.reason || null });
       })
     );
   }
