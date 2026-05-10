@@ -1,22 +1,7 @@
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
-function formatTime(date, timeZone) {
-  try {
-    return new Intl.DateTimeFormat('en-GB', {
-      timeZone: timeZone || 'UTC',
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).format(date) + ` (${timeZone || 'UTC'})`;
-  } catch {
-    return date.toUTCString();
-  }
-}
-/* ── Fetch with timeout ── */
+
+/* â”€â”€ Fetch with timeout â”€â”€ */
 async function ping(url, timeoutMs = 12000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -25,19 +10,17 @@ async function ping(url, timeoutMs = 12000) {
       method: 'GET',
       signal: ctrl.signal,
       redirect: 'follow',
-      headers: {
-        'User-Agent': 'PingWatch/1.0 (+https://pingwatch.netlify.app)',
-        'Accept': 'text/html,application/xhtml+xml,...',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      const up = res.status < 500; // UP при всём что ниже 500
+      headers: { 'User-Agent': 'PingWatch/1.0 uptime-monitor' },
+    });
+    clearTimeout(timer);
+    return { up: res.ok, status: res.status };
   } catch (err) {
     clearTimeout(timer);
     return { up: false, status: 0, errMsg: err.message };
   }
 }
 
-/* ── Notification senders ── */
+/* â”€â”€ Notification senders â”€â”€ */
 async function notifyTelegram(token, chatId, text) {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
@@ -78,12 +61,24 @@ async function notifyEmail(to, subject, text) {
   });
 }
 
-/* ── Dispatch alert to correct channel ── */
-async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebhookUrl, notificationEmail, timezone }, monitor, isDown) {
-  const label    = isDown ? '🔴 DOWN' : '🟢 BACK UP';
-  const localTime = formatTime(new Date(), timezone);
-  const mdText = `*${monitor.name}* is ${label}\nURL: \`${monitor.url}\`\n🕐 ${localTime}`;
-  const plainText = `${monitor.name} is ${label}\nURL: ${monitor.url}\nTime: ${localTime}`;
+async function notifySlack(webhookUrl, text) {
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Slack ${res.status}: ${body}`);
+  }
+}
+
+/* â”€â”€ Dispatch alert to correct channel â”€â”€ */
+async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebhookUrl, notificationEmail }, monitor, isDown) {
+  const label    = isDown ? 'ðŸ”´ DOWN' : 'ðŸŸ¢ BACK UP';
+  const mdText   = `*${monitor.name}* is ${label}\nURL: \`${monitor.url}\`\nðŸ• ${new Date().toUTCString()}`;
+  const plainText = `${monitor.name} is ${label}\nURL: ${monitor.url}\nTime: ${new Date().toUTCString()}`;
+
   try {
     if (channel === 'telegram') {
       const token  = process.env.TELEGRAM_BOT_TOKEN;
@@ -94,6 +89,10 @@ async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebh
     } else if (channel === 'discord') {
       if (!discordWebhookUrl) throw new Error('Discord webhook URL not configured for this user');
       await notifyDiscord(discordWebhookUrl, plainText);
+
+    } else if (channel === 'slack') {
+      if (!slackWebhookUrl) throw new Error('Slack webhook URL not configured for this user');
+      await notifySlack(slackWebhookUrl, plainText);
 
     } else if (channel === 'email') {
       if (!notificationEmail) throw new Error('Notification email not configured for this user');
@@ -108,7 +107,7 @@ async function sendAlert({ channel, telegramChatId, discordWebhookUrl, slackWebh
   }
 }
 
-/* ── Main scheduled handler ── */
+/* â”€â”€ Main scheduled handler â”€â”€ */
 exports.handler = async function () {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SECRET_KEY;
@@ -130,8 +129,7 @@ exports.handler = async function () {
         telegram_chat_id,
         discord_webhook_url,
         slack_webhook_url,
-        notification_email,
-        timezone
+        notification_email
       )
     `)
     .eq('is_active', true);
@@ -175,9 +173,8 @@ exports.handler = async function () {
             channel:            user.notification_channel || 'telegram',
             telegramChatId:     user.telegram_chat_id,
             discordWebhookUrl:  user.discord_webhook_url,
-            slackWebhookUrl: user.slack_webhook_url,
+            slackWebhookUrl:   user.slack_webhook_url,
             notificationEmail:  user.notification_email,
-            timezone: user.timezone || 'UTC',
           };
 
           if (newStatus === 'DOWN') {
@@ -221,7 +218,7 @@ exports.handler = async function () {
           }
         }
 
-        const line = `[CHECK] "${monitor.name}" → ${newStatus}${changed ? ' (CHANGED)' : ''}`;
+        const line = `[CHECK] "${monitor.name}" â†’ ${newStatus}${changed ? ' (CHANGED)' : ''}`;
         console.log(line);
         results.push({ name: monitor.name, status: newStatus, changed });
       })
