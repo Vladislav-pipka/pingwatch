@@ -227,6 +227,17 @@
     .incident-item__name { font-weight: 600; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .incident-item__meta { color: var(--color-text-muted); }
     .incident-item__status-open     { color: var(--color-notification); }
+    .incident-item__reason {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--text-xs);
+      color: var(--color-warning);
+      margin-top: 2px;
+    }
+.incident-item__reason--ssl   { color: var(--color-error); }
+.incident-item__reason--dns   { color: var(--color-notification); }
+.incident-item__reason--net   { color: var(--color-text-muted); }
     .incident-item__status-resolved { color: var(--color-success); }
 
     /* ── Modals ── */
@@ -552,10 +563,7 @@
       const ids = monitors.map(m => m.id);
       const el  = document.getElementById('incident-list');
 
-      if (!ids.length) {
-        el.innerHTML = emptyIncidents();
-        return;
-      }
+      if (!ids.length) { el.innerHTML = emptyIncidents(); return; }
 
       const { data } = await sb
         .from('incidents')
@@ -572,14 +580,34 @@
         const started  = AppUtils.formatRelativeTime(i.started_at);
         const resolved = i.resolved_at;
         const dur      = i.duration_seconds ? AppUtils.formatDuration(i.duration_seconds) : null;
+
         const statusEl = resolved
           ? `<span class="incident-item__status-resolved">✓ resolved${dur ? ' — ' + dur : ''}</span>`
           : `<span class="incident-item__status-open">● open</span>`;
+
+        // Определяем CSS-класс по типу ошибки
+        const reasonClass = (() => {
+          const r = (i.error_reason || '').toLowerCase();
+          if (r.includes('ssl') || r.includes('tls') || r.includes('cert')) return 'incident-item__reason--ssl';
+          if (r.includes('dns'))        return 'incident-item__reason--dns';
+          if (r.includes('timeout') || r.includes('refused') || r.includes('reset')) return 'incident-item__reason--net';
+          return '';
+        })();
+
+        const reasonEl = i.error_reason
+          ? `<div class="incident-item__reason ${reasonClass}">
+               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+               </svg>
+               ${esc(i.error_reason)}
+             </div>`
+          : '';
 
         return `
         <div class="incident-item">
           <div class="incident-item__name" title="${esc(name)}">${esc(name)}</div>
           <div class="incident-item__meta">${started}</div>
+          ${reasonEl}
           <div>${statusEl}</div>
         </div>`;
       }).join('');
