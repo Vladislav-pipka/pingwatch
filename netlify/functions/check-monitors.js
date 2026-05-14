@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 
-function formatTime(date, timeZone) {
+function formatTime(date, timeZone) { 
   try {
     return new Intl.DateTimeFormat('en-GB', {
       timeZone: timeZone || 'UTC',
@@ -214,7 +214,15 @@ exports.handler = async function () {
         if (updateErr) {
           console.error(`[UPDATE ERR] "${monitor.name}": ${updateErr.message}`);
         }
-
+        // Сохраняем историю каждой проверки
+        await sb.from('monitor_checks').insert({
+          monitor_id:       monitor.id,
+          checked_at:       now,
+          status_code:      checkResult.status      || null,
+          response_time_ms: checkResult.responseTime || null,
+          is_up:            up,
+          error_reason:     checkResult.reason      || null,
+        });
         if (changed) {
           const user = monitor.users || {};
           const notifParams = {
