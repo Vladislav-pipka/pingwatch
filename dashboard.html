@@ -469,7 +469,45 @@
       const sb = AppUtils.getSupabase();
       const { data, error } = await sb
         .from('monitors')
-        .select('*')
+        async function loadMonitors() {
+          const sb = AppUtils.getSupabase();
+
+          const { data, error } = await sb
+            .from('monitors')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+          if (error) { AppUtils.showToast('Could not load monitors.', 'error'); return; }
+
+          const list = data || [];
+
+          // Подгружаем последний response_time для каждого монитора
+          if (list.length) {
+            const ids = list.map(m => m.id);
+            const { data: checks } = await sb
+              .from('monitor_checks')
+              .select('monitor_id, response_time_ms, checked_at')
+              .in('monitor_id', ids)
+              .order('checked_at', { ascending: false });
+
+            // Берём только первую (последнюю) запись для каждого монитора
+            const latestByMonitor = {};
+            (checks || []).forEach(c => {
+              if (!latestByMonitor[c.monitor_id]) {
+                latestByMonitor[c.monitor_id] = c.response_time_ms;
+              }
+            });
+
+            list.forEach(m => {
+              m.last_response_time = latestByMonitor[m.id] ?? null;
+            });
+          }
+
+          monitors = list;
+          renderMonitors(monitors);
+          updateStats(monitors);
+        }
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
@@ -538,6 +576,17 @@
             <div class="monitor-name" title="${esc(m.name)}">${esc(m.name)}</div>
             <div class="monitor-url"  title="${esc(m.url)}">${esc(m.url)}</div>
           </div>
+          const rt = m.last_response_time;
+          const rtLabel = rt == null ? null
+            : rt < 1000 ? `${rt}ms`
+            : `${(rt / 1000).toFixed(1)}s`;
+          const rtColor = rt == null ? null
+            : rt < 500  ? 'var(--color-success)'
+            : rt < 1500 ? 'var(--color-warning)'
+            : 'var(--color-notification)';
+          const rtBadge = rtLabel
+            ? `<span style="font-family:var(--font-mono);font-size:var(--text-xs);color:${rtColor};margin-right:var(--space-3)">${rtLabel}</span>`
+            : '';
           <div class="monitor-checked">Last pinged: ${AppUtils.formatRelativeTime(m.last_checked_at)}</div>
           <label class="toggle" aria-label="Enable ${esc(m.name)}">
             <input type="checkbox" ${m.is_active ? 'checked' : ''} onchange="toggleMonitor('${m.id}', this.checked)" />
