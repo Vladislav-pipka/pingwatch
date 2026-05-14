@@ -232,6 +232,10 @@ exports.handler = async function () {
               started_at:       now,
               resolved_at:      null,
               duration_seconds: null,
+              error_reason:     checkResult.reason   || null,
+              error_details:    checkResult.details  || null,
+              status_code:      checkResult.status   || null,
+              response_time_ms: checkResult.responseTime || null,
             });
             if (incErr) console.error(`[INCIDENT OPEN ERR] ${incErr.message}`);
 
