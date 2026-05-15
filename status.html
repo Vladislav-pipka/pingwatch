@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PingWatch Status</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .status-up { color: #22c55e; }
+    .status-down { color: #ef4444; }
+    .muted { color: #9ca3af; font-size: 14px; }
+    .incident {
+      border-top: 1px solid #1f2937;
+      padding: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 id="name">Loading...</h1>
+      <p id="status"></p>
+      <p class="muted" id="meta"></p>
+    </div>
+
+    <div class="card">
+      <h2>Recent incidents</h2>
+      <div id="incidents">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://xdkzdjlhmktqyagdiizl.supabase.co';
+    const SUPABASE_KEY = 'ТВОЙ_ANON_KEY';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('slug');
+
+    async function loadStatus() {
+      if (!slug) {
+        document.getElementById('name').textContent = 'Missing status slug';
+        return;
+      }
+
+      const { data: monitor, error } = await sb
+        .from('monitors')
+        .select('*')
+        .eq('status_slug', slug)
+        .eq('is_public', true)
+        .single();
+
+      if (error || !monitor) {
+        document.getElementById('name').textContent = 'Status page not found';
+        return;
+      }
+
+      document.getElementById('name').textContent = monitor.name;
+      document.getElementById('status').innerHTML =
+        monitor.last_status === 'UP'
+          ? '<span class="status-up">● Operational</span>'
+          : '<span class="status-down">● Down</span>';
+
+      document.getElementById('meta').textContent =
+        `Last checked: ${monitor.last_checked_at || '—'}`;
+
+      const { data: incidents } = await sb
+        .from('incidents')
+        .select('*')
+        .eq('monitor_id', monitor.id)
+        .order('started_at', { ascending: false })
+        .limit(10);
+
+      const el = document.getElementById('incidents');
+      if (!incidents || !incidents.length) {
+        el.innerHTML = '<p class="muted">No recent incidents</p>';
+        return;
+      }
+
+      el.innerHTML = incidents.map(i => `
+        <div class="incident">
+          <div>${i.resolved_at ? 'Resolved' : 'Open incident'}</div>
+          <div class="muted">
+            Started: ${i.started_at}<br>
+            ${i.error_reason ? `Reason: ${i.error_reason}<br>` : ''}
+            ${i.duration_seconds ? `Duration: ${i.duration_seconds}s` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    loadStatus();
+  </script>
+</body>
+</html>
