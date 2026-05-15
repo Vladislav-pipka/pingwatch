@@ -7,11 +7,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     body {
-      font-family: Inter, sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
       margin: 0;
       padding: 40px 20px;
+      background: #0b1220;
+      color: #e5e7eb;
+      font-family: Inter, Arial, sans-serif;
     }
     .wrap {
       max-width: 760px;
@@ -24,8 +24,8 @@
       padding: 24px;
       margin-bottom: 20px;
     }
-    .status-up { color: #22c55e; }
-    .status-down { color: #ef4444; }
+    .ok { color: #22c55e; }
+    .bad { color: #ef4444; }
     .muted { color: #9ca3af; font-size: 14px; }
     .incident {
       border-top: 1px solid #1f2937;
@@ -36,28 +36,42 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1 id="name">Loading...</h1>
-      <p id="status"></p>
-      <p class="muted" id="meta"></p>
+      <h1 id="monitor-name">Loading...</h1>
+      <div id="monitor-status"></div>
+      <p class="muted" id="monitor-meta"></p>
     </div>
 
     <div class="card">
       <h2>Recent incidents</h2>
-      <div id="incidents">Loading...</div>
+      <div id="incident-list">Loading...</div>
     </div>
   </div>
 
   <script>
     const SUPABASE_URL = 'https://xdkzdjlhmktqyagdiizl.supabase.co';
-    const SUPABASE_KEY = 'ТВОЙ_ANON_KEY';
+    const SUPABASE_KEY = 'ТВОЙ_SUPABASE_ANON_KEY';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const params = new URLSearchParams(window.location.search);
     const slug = params.get('slug');
 
-    async function loadStatus() {
+    function formatRelativeTime(value) {
+      if (!value) return 'Never';
+      const diff = Date.now() - new Date(value).getTime();
+      const s = Math.floor(diff / 1000);
+      if (s < 60) return `${s}s ago`;
+      const m = Math.floor(s / 60);
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      const d = Math.floor(h / 24);
+      return `${d}d ago`;
+    }
+
+    async function loadStatusPage() {
       if (!slug) {
-        document.getElementById('name').textContent = 'Missing status slug';
+        document.getElementById('monitor-name').textContent = 'Missing slug';
+        document.getElementById('incident-list').innerHTML = '<p class="muted">Add ?slug=your-monitor-slug</p>';
         return;
       }
 
@@ -69,18 +83,20 @@
         .single();
 
       if (error || !monitor) {
-        document.getElementById('name').textContent = 'Status page not found';
+        document.getElementById('monitor-name').textContent = 'Status page not found';
+        document.getElementById('monitor-status').innerHTML = '<span class="bad">Unavailable</span>';
+        document.getElementById('incident-list').innerHTML = '<p class="muted">No public monitor found for this slug.</p>';
         return;
       }
 
-      document.getElementById('name').textContent = monitor.name;
-      document.getElementById('status').innerHTML =
-        monitor.last_status === 'UP'
-          ? '<span class="status-up">● Operational</span>'
-          : '<span class="status-down">● Down</span>';
+      const statusHtml = monitor.last_status === 'UP'
+        ? '<span class="ok">● Operational</span>'
+        : '<span class="bad">● Down</span>';
 
-      document.getElementById('meta').textContent =
-        `Last checked: ${monitor.last_checked_at || '—'}`;
+      document.getElementById('monitor-name').textContent = monitor.name;
+      document.getElementById('monitor-status').innerHTML = statusHtml;
+      document.getElementById('monitor-meta').textContent =
+        `Last checked ${formatRelativeTime(monitor.last_checked_at)}`;
 
       const { data: incidents } = await sb
         .from('incidents')
@@ -89,17 +105,18 @@
         .order('started_at', { ascending: false })
         .limit(10);
 
-      const el = document.getElementById('incidents');
+      const listEl = document.getElementById('incident-list');
+
       if (!incidents || !incidents.length) {
-        el.innerHTML = '<p class="muted">No recent incidents</p>';
+        listEl.innerHTML = '<p class="muted">No recent incidents</p>';
         return;
       }
 
-      el.innerHTML = incidents.map(i => `
+      listEl.innerHTML = incidents.map(i => `
         <div class="incident">
-          <div>${i.resolved_at ? 'Resolved' : 'Open incident'}</div>
+          <div>${i.resolved_at ? 'Resolved incident' : 'Open incident'}</div>
           <div class="muted">
-            Started: ${i.started_at}<br>
+            Started: ${new Date(i.started_at).toLocaleString()}<br>
             ${i.error_reason ? `Reason: ${i.error_reason}<br>` : ''}
             ${i.duration_seconds ? `Duration: ${i.duration_seconds}s` : ''}
           </div>
@@ -107,7 +124,7 @@
       `).join('');
     }
 
-    loadStatus();
+    loadStatusPage();
   </script>
 </body>
 </html>
