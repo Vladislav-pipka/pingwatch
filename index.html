@@ -67,6 +67,21 @@
       margin-bottom: var(--space-10);
       line-height: 1.7;
     }
+    .hero-trust {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .trust-item {
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      font-size: 14px;
+      color: #d1d5db;
+      background: rgba(255,255,255,0.04);
+    }
 
     /* terminal */
     .terminal {
@@ -328,6 +343,11 @@
           <div class="auth-card">
             <h2 class="auth-card__title">Get started free</h2>
             <p class="auth-card__sub">No credit card required.</p>
+            <div class="hero-trust">
+            <div class="trust-item">Instant alerts via Telegram, Discord, and Email</div>
+            <div class="trust-item">Automatic checks every 5 minutes</div>
+            <div class="trust-item">Downtime and recovery notifications</div>
+            </div>
 
             <div class="tabs" role="tablist" aria-label="Sign up or sign in">
               <button class="tab-btn active" role="tab" aria-selected="true" id="tab-reg" type="button">Sign Up</button>
