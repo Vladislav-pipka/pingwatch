@@ -3,8 +3,9 @@ const { createClient } = require('@supabase/supabase-js');
 
 function formatTime(date, timeZone) { 
   try {
+    const tz = (timeZone && timeZone.trim()) ? timeZone.trim() : 'UTC';
     return new Intl.DateTimeFormat('en-GB', {
-      timeZone: timeZone || 'UTC',
+      timeZone: tz,
       year: 'numeric',
       month: 'short',
       day: '2-digit',
@@ -12,7 +13,7 @@ function formatTime(date, timeZone) {
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-    }).format(date) + ` (${timeZone || 'UTC'})`;
+    }).format(date) + ` (${tz})`;
   } catch {
     return date.toUTCString();
   }
@@ -231,7 +232,7 @@ exports.handler = async function () {
             discordWebhookUrl: user.discord_webhook_url,
             slackWebhookUrl:   user.slack_webhook_url,
             notificationEmail: user.notification_email,
-            timezone:          user.timezone || 'UTC',
+            timezone: (user.timezone && user.timezone.trim()) ? user.timezone.trim() : 'UTC',
           };
 
           if (newStatus === 'DOWN') {
