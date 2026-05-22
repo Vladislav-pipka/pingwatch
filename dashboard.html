@@ -466,54 +466,39 @@
     }
 
     async function loadMonitors() {
-      const sb = AppUtils.getSupabase();
-      const { data, error } = await sb
+      const { data, error } = await supabase
         .from('monitors')
-        async function loadMonitors() {
-          const sb = AppUtils.getSupabase();
-
-          const { data, error } = await sb
-            .from('monitors')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-
-          if (error) { AppUtils.showToast('Could not load monitors.', 'error'); return; }
-
-          const list = data || [];
-
-          // Подгружаем последний response_time для каждого монитора
-          if (list.length) {
-            const ids = list.map(m => m.id);
-            const { data: checks } = await sb
-              .from('monitor_checks')
-              .select('monitor_id, response_time_ms, checked_at')
-              .in('monitor_id', ids)
-              .order('checked_at', { ascending: false });
-
-            // Берём только первую (последнюю) запись для каждого монитора
-            const latestByMonitor = {};
-            (checks || []).forEach(c => {
-              if (!latestByMonitor[c.monitor_id]) {
-                latestByMonitor[c.monitor_id] = c.response_time_ms;
-              }
-            });
-
-            list.forEach(m => {
-              m.last_response_time = latestByMonitor[m.id] ?? null;
-            });
-          }
-
-          monitors = list;
-          renderMonitors(monitors);
-          updateStats(monitors);
-        }
+        .select('*')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
-      if (error) { AppUtils.showToast('Could not load monitors.', 'error'); return; }
+      if (error) {
+        AppUtils.showToast('Could not load monitors.', 'error');
+        return;
+      }
 
-      monitors = data || [];
+      const list = (data || []).map(m => ({ ...m }));
+      const latestByMonitor = {};
+
+      const { data: responses, error: responsesError } = await supabase
+        .from('responses')
+        .select('monitor_id, response_time_ms')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (!responsesError && Array.isArray(responses)) {
+        responses.forEach(r => {
+          if (r.monitor_id && latestByMonitor[r.monitor_id] == null) {
+            latestByMonitor[r.monitor_id] = r.response_time_ms;
+          }
+        });
+      }
+
+      list.forEach(m => {
+        m.last_response_time = latestByMonitor[m.id] ?? null;
+      });
+
+      monitors = list;
       renderMonitors(monitors);
       updateStats(monitors);
     }
