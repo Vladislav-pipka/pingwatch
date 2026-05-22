@@ -466,7 +466,8 @@
     }
 
     async function loadMonitors() {
-      const { data, error } = await supabase
+      const sb = AppUtils.getSupabase();
+      const { data, error } = await sb
         .from('monitors')
         .select('*')
         .eq('user_id', currentUser.id)
@@ -480,7 +481,7 @@
       const list = (data || []).map(m => ({ ...m }));
       const latestByMonitor = {};
 
-      const { data: responses, error: responsesError } = await supabase
+      const { data: responses, error: responsesError } = await sb
         .from('responses')
         .select('monitor_id, response_time_ms')
         .eq('user_id', currentUser.id)
@@ -526,7 +527,7 @@
       }
       const pct = Math.min(100, Math.round((used / maxM) * 100));
       const bar = document.getElementById('plan-bar');
-      bar.style.width = pct + '%';
+      bar.style.width = pct + '%';  
       bar.className = 'plan-banner__bar-fill' + (pct >= 100 ? ' plan-banner__bar-fill--full' : pct >= 80 ? ' plan-banner__bar-fill--warn' : '');
       document.getElementById('plan-bar-label').textContent = used + ' / ' + maxM + ' monitors used';
     }
@@ -554,40 +555,48 @@
           ? `<span class="badge badge--down"><span class="badge__dot"></span>DOWN</span>`
           : `<span class="badge badge--unknown"><span class="badge__dot"></span>—</span>`;
 
+        const rt = m.last_response_time;
+        const rtLabel = rt == null
+          ? null
+          : rt < 1000
+          ? `${rt}ms`
+          : `${(rt / 1000).toFixed(1)}s`;
+
+        const rtColor = rt == null
+          ? null
+          : rt < 500
+          ? 'var(--color-success)'
+          : rt < 1500
+          ? 'var(--color-warning)'
+          : 'var(--color-notification)';
+
+        const rtBadge = rtLabel
+          ? `<span style="font-family:var(--font-mono);font-size:var(--text-xs);color:${rtColor};margin-right:var(--space-3)">${rtLabel}</span>`
+          : '';
+
         return `
-        <div class="monitor-row${m.last_status === 'DOWN' ? ' monitor-row--down' : ''}" id="row-${m.id}">
-          ${badge}
-          <div style="min-width:0">
-            <div class="monitor-name" title="${esc(m.name)}">${esc(m.name)}</div>
-            <div class="monitor-url"  title="${esc(m.url)}">${esc(m.url)}</div>
-          </div>
-          const rt = m.last_response_time;
-          const rtLabel = rt == null ? null
-            : rt < 1000 ? `${rt}ms`
-            : `${(rt / 1000).toFixed(1)}s`;
-          const rtColor = rt == null ? null
-            : rt < 500  ? 'var(--color-success)'
-            : rt < 1500 ? 'var(--color-warning)'
-            : 'var(--color-notification)';
-          const rtBadge = rtLabel
-            ? `<span style="font-family:var(--font-mono);font-size:var(--text-xs);color:${rtColor};margin-right:var(--space-3)">${rtLabel}</span>`
-            : '';
-          <div class="monitor-checked">Last pinged: ${AppUtils.formatRelativeTime(m.last_checked_at)}</div>
-          <label class="toggle" aria-label="Enable ${esc(m.name)}">
-            <input type="checkbox" ${m.is_active ? 'checked' : ''} onchange="toggleMonitor('${m.id}', this.checked)" />
-            <div class="toggle__track"></div>
-            <div class="toggle__thumb"></div>
-          </label>
-          <div class="monitor-actions">
-            <button class="btn btn-ghost btn-sm" onclick="openDel('${m.id}','${escAttr(m.name)}')"
-                    aria-label="Delete ${esc(m.name)}" title="Delete">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/>
-              </svg>
-            </button>
-          </div>
-        </div>`;
+          <div class="monitor-row${m.last_status === 'DOWN' ? ' monitor-row--down' : ''}" id="row-${m.id}">
+            ${badge}
+            <div style="min-width:0">
+              <div class="monitor-name" title="${esc(m.name)}">${esc(m.name)}</div>
+              <div class="monitor-url" title="${esc(m.url)}">${esc(m.url)}</div>
+            </div>
+            <div class="monitor-checked">${rtBadge}Last pinged: ${AppUtils.formatRelativeTime(m.last_checked_at)}</div>
+            <label class="toggle" aria-label="Enable ${esc(m.name)}">
+              <input type="checkbox" ${m.is_active ? 'checked' : ''} onchange="toggleMonitor('${m.id}', this.checked)" />
+              <div class="toggle__track"></div>
+              <div class="toggle__thumb"></div>
+            </label>
+            <div class="monitor-actions">
+              <button class="btn btn-ghost btn-sm" onclick="openDel('${m.id}','${escAttr(m.name)}')"
+                      aria-label="Delete ${esc(m.name)}" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>`;
       }).join('');
     }
 
