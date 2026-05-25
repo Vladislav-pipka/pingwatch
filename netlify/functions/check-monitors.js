@@ -240,57 +240,62 @@ exports.handler = async function () {
           is_up:            up,
           error_reason:     checkResult.reason      || null,
         });
-        if (changed) {
-          const user = monitor.users || {};
-          const notifParams = {
-            channel:           user.notification_channel || 'telegram',
-            telegramChatId:    user.telegram_chat_id,
-            discordWebhookUrl: user.discord_webhook_url,
-            slackWebhookUrl:   user.slack_webhook_url,
-            notificationEmail: user.notification_email,
-            timezone: (user.timezone && user.timezone.trim()) ? user.timezone.trim() : 'UTC',
-          };
+                const user = monitor.users || {};
+                const notifParams = {
+                  channel:           user.notification_channel || 'telegram',
+                  telegramChatId:    user.telegram_chat_id,
+                  discordWebhookUrl: user.discord_webhook_url,
+                  slackWebhookUrl:   user.slack_webhook_url,
+                  notificationEmail: user.notification_email,
+                  timezone: (user.timezone && user.timezone.trim()) ? user.timezone.trim() : 'UTC',
+                };
 
-          if (newStatus === 'DOWN') {
-            const { error: incErr } = await sb.from('incidents').insert({
-              monitor_id:       monitor.id,
-              started_at:       now,
-              resolved_at:      null,
-              duration_seconds: null,
-              error_reason:     checkResult.reason   || null,
-              error_details:    checkResult.details  || null,
-              status_code:      checkResult.status   || null,
-              response_time_ms: checkResult.responseTime || null,
-            });
-            if (incErr) console.error(`[INCIDENT OPEN ERR] ${incErr.message}`);
+                const shouldAlertDown =
+                  newStatus === 'DOWN' && (prevStatus === null || prevStatus === 'UP');
 
-            await sendAlert(notifParams, monitor, true, checkResult);
+                const shouldAlertUp =
+                  newStatus === 'UP' && prevStatus === 'DOWN';
 
-          } else if (newStatus === 'UP' && prevStatus === 'DOWN') {
-            const { data: openInc } = await sb
-              .from('incidents')
-              .select('id, started_at')
-              .eq('monitor_id', monitor.id)
-              .is('resolved_at', null)
-              .order('started_at', { ascending: false })
-              .limit(1)
-              .single();
+                if (shouldAlertDown) {
+                  const { error: incErr } = await sb.from('incidents').insert({
+                    monitor_id:       monitor.id,
+                    started_at:       now,
+                    resolved_at:      null,
+                    duration_seconds: null,
+                    error_reason:     checkResult.reason || null,
+                    error_details:    checkResult.details || null,
+                    status_code:      checkResult.status || null,
+                    response_time_ms: checkResult.responseTime || null,
+                  });
 
-            if (openInc) {
-              const durationSecs = Math.round(
-                (new Date(now) - new Date(openInc.started_at)) / 1000
-              );
-              const { error: resolveErr } = await sb.from('incidents').update({
-                resolved_at:      now,
-                duration_seconds: durationSecs,
-              }).eq('id', openInc.id);
+                  if (incErr) console.error(`[INCIDENT OPEN ERR] ${incErr.message}`);
 
-              if (resolveErr) console.error(`[INCIDENT CLOSE ERR] ${resolveErr.message}`);
-            }
+                  await sendAlert(notifParams, monitor, true, checkResult);
+                } else if (shouldAlertUp) {
+                  const { data: openInc } = await sb
+                    .from('incidents')
+                    .select('id, started_at')
+                    .eq('monitor_id', monitor.id)
+                    .is('resolved_at', null)
+                    .order('started_at', { ascending: false })
+                    .limit(1)
+                    .single();
 
-            await sendAlert(notifParams, monitor, false, checkResult);
-          }
-        }
+                  if (openInc) {
+                    const durationSecs = Math.round(
+                      (new Date(now) - new Date(openInc.started_at)) / 1000
+                    );
+
+                    const { error: resolveErr } = await sb.from('incidents').update({
+                      resolved_at: now,
+                      duration_seconds: durationSecs,
+                    }).eq('id', openInc.id);
+
+                    if (resolveErr) console.error(`[INCIDENT CLOSE ERR] ${resolveErr.message}`);
+                  }
+
+                  await sendAlert(notifParams, monitor, false, checkResult);
+                }
 
         const reasonTag = (!up && checkResult.reason) ? ` | ${checkResult.reason}` : '';
         console.log(`[CHECK] "${monitor.name}" → ${newStatus}${changed ? ' (CHANGED)' : ''}${reasonTag}`);
