@@ -146,6 +146,18 @@ async function sendAlert(
     } else if (channel === 'discord') {
       if (!discordWebhookUrl) throw new Error('Discord webhook URL not configured for this user');
       await notifyDiscord(discordWebhookUrl, plainText);
+    } else if (channel === 'slack') {
+      if (!slackWebhookUrl) throw new Error('Slack webhook URL not configured for this user');
+      const res = await fetch(slackWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: plainText }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Slack ${res.status}: ${body}`);
+      }
+    }
     } else if (channel === 'email') {
       if (!notificationEmail) throw new Error('Notification email not configured for this user');
       const subject = `PingWatch: ${monitor.name} is ${isDown ? 'DOWN' : 'back UP'}`;
