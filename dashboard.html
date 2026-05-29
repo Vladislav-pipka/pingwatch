@@ -503,24 +503,8 @@
       }
 
       const list = (data || []).map(m => ({ ...m }));
-      const latestByMonitor = {};
-
-      const { data: responses, error: responsesError } = await sb
-        .from('responses')
-        .select('monitor_id, response_time_ms')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      if (!responsesError && Array.isArray(responses)) {
-        responses.forEach(r => {
-          if (r.monitor_id && latestByMonitor[r.monitor_id] == null) {
-            latestByMonitor[r.monitor_id] = r.response_time_ms;
-          }
-        });
-      }
-
       list.forEach(m => {
-        m.last_response_time = latestByMonitor[m.id] ?? null;
+        m.last_response_time = null;
       });
 
       monitors = list;
