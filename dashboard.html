@@ -688,7 +688,8 @@
     }
 
     /* ── Add monitor ── */
-    document.getElementById('add-submit').addEventListener('click', async () => {
+    const addSubmitBtn = document.getElementById('add-submit');
+    if (addSubmitBtn) addSubmitBtn.addEventListener('click', async () => {
       const btn  = document.getElementById('add-submit');
       const errEl = document.getElementById('add-err');
       errEl.hidden = true;
