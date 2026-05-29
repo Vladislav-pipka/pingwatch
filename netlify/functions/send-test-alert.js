@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const sb = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY
 );
 
 async function notifyTelegram(token, chatId, text) {
@@ -35,10 +35,13 @@ async function notifyEmail(email, text) {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: false,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    auth: {
+      user: process.env.SMTP_USER || process.env.SMTP_EMAIL,
+      pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD
+    }
   });
   await transport.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || process.env.SMTP_EMAIL,
     to: email,
     subject: '🧪 PingWatch — Test Alert',
     text
