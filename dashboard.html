@@ -434,32 +434,20 @@
     </div>
   </div>
 
-  <!-- Delete Account Modal -->
-  <div id="modal-delete-account" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-da-title">
+  <div id="modal-del" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal__header">
-        <h3 class="modal__title" id="modal-da-title">Delete account</h3>
-        <button class="btn btn-ghost btn-sm" onclick="AppUtils.closeModal('modal-delete-account')" aria-label="Close">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <h3 class="modal__title">Delete monitor</h3>
+        <button class="btn btn-ghost btn-sm" onclick="AppUtils.closeModal('modal-del')" aria-label="Close">✕</button>
       </div>
-      <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-4)">
-        <p style="font-size:var(--text-sm);color:var(--color-notification);background:oklch(from var(--color-notification) l c h / 0.08);border:1px solid oklch(from var(--color-notification) l c h / 0.2);border-radius:var(--radius-md);padding:var(--space-3)">
-          ⚠️ This will permanently delete your account, all monitors, and all incident history. This cannot be undone.
+      <div class="modal__body">
+        <p style="font-size:var(--text-sm);color:var(--color-text-muted)">
+          Are you sure you want to delete <strong id="del-name">this monitor</strong>?
         </p>
-        <div class="form-group">
-          <label class="form-label" for="da-email">Confirm your email</label>
-          <input class="form-input" type="email" id="da-email" placeholder="you@example.com" autocomplete="email" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="da-password">Your password</label>
-          <input class="form-input" type="password" id="da-password" placeholder="Enter your password" autocomplete="current-password" />
-        </div>
-        <p id="da-error" style="font-size:var(--text-xs);color:var(--color-notification);display:none"></p>
       </div>
       <div class="modal__footer">
-        <button class="btn btn-secondary btn-sm" onclick="AppUtils.closeModal('modal-delete-account')">Cancel</button>
-        <button class="btn btn-danger btn-sm" id="da-confirm">Yes, delete my account</button>
+        <button class="btn btn-secondary btn-sm" onclick="AppUtils.closeModal('modal-del')">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="del-confirm">Delete</button>
       </div>
     </div>
   </div>
@@ -759,31 +747,35 @@
     /* ── Delete monitor ── */
     function openDel(id, name) {
       delTargetId = id;
-      document.getElementById('del-name').textContent = name;
+      const delNameEl = document.getElementById('del-name');
+      if (delNameEl) delNameEl.textContent = name;
       AppUtils.openModal('modal-del');
     }
 
-    document.getElementById('del-confirm').addEventListener('click', async () => {
-      if (!delTargetId) return;
-      const btn = document.getElementById('del-confirm');
-      btn.disabled = true;
-      btn.textContent = 'Deleting…';
+    const delConfirmBtn = document.getElementById('del-confirm');
+    if (delConfirmBtn) {
+      delConfirmBtn.addEventListener('click', async () => {
+        if (!delTargetId) return;
+        const btn = document.getElementById('del-confirm');
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
 
-      const sb = AppUtils.getSupabase();
-      await sb.from('incidents').delete().eq('monitor_id', delTargetId);
-      const { error } = await sb.from('monitors').delete().eq('id', delTargetId);
+        const sb = AppUtils.getSupabase();
+        await sb.from('incidents').delete().eq('monitor_id', delTargetId);
+        const { error } = await sb.from('monitors').delete().eq('id', delTargetId);
 
-      btn.disabled = false;
-      btn.textContent = 'Delete';
-      AppUtils.closeModal('modal-del');
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        AppUtils.closeModal('modal-del');
 
-      if (error) { AppUtils.showToast('Delete failed.', 'error'); return; }
+        if (error) { AppUtils.showToast('Delete failed.', 'error'); return; }
 
-      delTargetId = null;
-      AppUtils.showToast('Deleted.', 'success');
-      await loadAll();
-    });
-
+        delTargetId = null;
+        AppUtils.showToast('Deleted.', 'success');
+        await loadAll();
+      });
+    }
+      
     /* ── Helpers ── */
     function esc(s) {
       return String(s)
@@ -855,10 +847,14 @@
     AppUtils.openModal('modal-channel');
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('ch-save-btn').addEventListener('click', saveChannel);
-    document.getElementById('ch-test-btn').addEventListener('click', sendTestAlert);
-    document.getElementById('da-confirm').addEventListener('click', deleteAccount);
+  window.addEventListener('load', () => {
+    const chSaveBtn = document.getElementById('ch-save-btn');
+    const chTestBtn = document.getElementById('ch-test-btn');
+    const daConfirmBtn = document.getElementById('da-confirm');
+
+    if (chSaveBtn) chSaveBtn.addEventListener('click', saveChannel);
+    if (chTestBtn) chTestBtn.addEventListener('click', sendTestAlert);
+    if (daConfirmBtn) daConfirmBtn.addEventListener('click', deleteAccount);
   });
 
   async function saveChannel() {
