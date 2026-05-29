@@ -673,53 +673,86 @@
 
     /* ── Add monitor ── */
     const addSubmitBtn = document.getElementById('add-submit');
-    if (addSubmitBtn) addSubmitBtn.addEventListener('click', async () => {
-      const btn  = document.getElementById('add-submit');
-      const errEl = document.getElementById('add-err');
-      errEl.hidden = true;
+    if (addSubmitBtn) {
+      addSubmitBtn.addEventListener('click', async () => {
+        const btn = document.getElementById('add-submit');
+        const errEl = document.getElementById('add-err');
+        const addNameEl = document.getElementById('add-name');
+        const addUrlEl = document.getElementById('add-url');
 
-      const name = document.getElementById('add-name').value.trim();
-      const url  = document.getElementById('add-url').value.trim();
+        if (errEl) errEl.hidden = true;
 
-      const maxAllowed = userPlan === 'pro' ? 10 : userPlan === 'unlimited' ? Infinity : 2;
-      if (monitors.length >= maxAllowed) {
-        errEl.textContent = 'Monitor limit reached. Upgrade to add more monitors.';
-        errEl.hidden = false;
-        return;
-      }
-      
-      if (!name) { errEl.textContent = 'Name is required.';  errEl.hidden = false; return; }
-      if (!url)  { errEl.textContent = 'URL is required.';   errEl.hidden = false; return; }
-      try { new URL(url); } catch {
-        errEl.textContent = 'Enter a valid URL (e.g. https://example.com)';
-        errEl.hidden = false;
-        return;
-      }
+        const name = addNameEl ? addNameEl.value.trim() : '';
+        const url = addUrlEl ? addUrlEl.value.trim() : '';
 
-      btn.disabled = true;
-      btn.textContent = 'Adding…';
+        const maxAllowed = userPlan === 'pro' ? 10 : userPlan === 'unlimited' ? Infinity : 2;
 
-      const sb = AppUtils.getSupabase();
-      const { error } = await sb.from('monitors').insert({
-        user_id:        currentUser.id,
-        name,
-        url,
-        is_active:      true,
-        last_status:    null,
-        last_checked_at: null,
+        if (monitors.length >= maxAllowed) {
+          if (errEl) {
+            errEl.textContent = 'Monitor limit reached. Upgrade to add more monitors.';
+            errEl.hidden = false;
+          }
+          return;
+        }
+
+        if (!name) {
+          if (errEl) {
+            errEl.textContent = 'Name is required.';
+            errEl.hidden = false;
+          }
+          return;
+        }
+
+        if (!url) {
+          if (errEl) {
+            errEl.textContent = 'URL is required.';
+            errEl.hidden = false;
+          }
+          return;
+        }
+
+        try {
+          new URL(url);
+        } catch {
+          if (errEl) {
+            errEl.textContent = 'Enter a valid URL (e.g. https://example.com)';
+            errEl.hidden = false;
+          }
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+
+        const sb = AppUtils.getSupabase();
+        const { error } = await sb.from('monitors').insert({
+          user_id: currentUser.id,
+          name,
+          url,
+          is_active: true,
+          last_status: null,
+          last_checked_at: null
+        });
+
+        btn.disabled = false;
+        btn.textContent = 'Add monitor';
+
+        if (error) {
+          if (errEl) {
+            errEl.textContent = error.message;
+            errEl.hidden = false;
+          }
+          return;
+        }
+
+        if (addNameEl) addNameEl.value = '';
+        if (addUrlEl) addUrlEl.value = '';
+
+        AppUtils.closeModal('modal-add');
+        AppUtils.showToast('Monitor added!', 'success');
+        await loadAll();
       });
-
-      btn.disabled = false;
-      btn.textContent = 'Add monitor';
-
-      if (error) { errEl.textContent = error.message; errEl.hidden = false; return; }
-
-      document.getElementById('add-name').value = '';
-      document.getElementById('add-url').value  = '';
-      AppUtils.closeModal('modal-add');
-      AppUtils.showToast('Monitor added!', 'success');
-      await loadAll();
-    });
+    }
 
     /* ── Toggle active ── */
     async function toggleMonitor(id, isActive) {
