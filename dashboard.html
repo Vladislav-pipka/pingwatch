@@ -451,6 +451,62 @@
       </div>
     </div>
   </div>
+  <!-- Add Monitor Modal -->
+  <div id="modal-add" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-add-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-add-title">Add monitor</h3>
+        <button class="btn btn-ghost btn-sm" onclick="AppUtils.closeModal('modal-add')" aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <div class="form-group">
+          <label class="form-label" for="add-name">Name</label>
+          <input class="form-input" id="add-name" type="text" placeholder="My API">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add-url">URL</label>
+          <input class="form-input" id="add-url" type="url" placeholder="https://example.com/health">
+        </div>
+        <p id="add-err" hidden style="font-size:var(--text-xs);color:var(--color-notification)"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="AppUtils.closeModal('modal-add')">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="add-submit">Add monitor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Account Modal -->
+  <div id="modal-delete-account" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-da-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-da-title">Delete account</h3>
+        <button class="btn btn-ghost btn-sm" onclick="AppUtils.closeModal('modal-delete-account')" aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <p style="font-size:var(--text-sm);color:var(--color-text-muted)">
+          This action is permanent. Enter your email and password to confirm.
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="da-email">Email</label>
+          <input class="form-input" id="da-email" type="email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="da-password">Password</label>
+          <input class="form-input" id="da-password" type="password" placeholder="Your password">
+        </div>
+        <p id="da-error" style="display:none;font-size:var(--text-xs);color:var(--color-notification)"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="AppUtils.closeModal('modal-delete-account')">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="da-confirm">Yes, delete my account</button>
+      </div>
+    </div>
+  </div>
   <div id="toast-container" role="status" aria-live="polite"></div>
 
   <script>
