@@ -1,5 +1,6 @@
 /* ─── Supabase Client (CDN) ──────────────────────────────── */
 let _supabase = null;
+let _theme = null;
 
 function getSupabase() {
   if (_supabase) return _supabase;
@@ -11,11 +12,11 @@ function getSupabase() {
 /* ─── Theme Toggle ───────────────────────────────────────── */
 function initTheme() {
   const root = document.documentElement;
-  let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  const saved = sessionStorage.getItem('theme');
-  if (saved) theme = saved;
-  root.setAttribute('data-theme', theme);
-  updateToggleIcon(theme);
+  if (!_theme) {
+    _theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', _theme);
+  updateToggleIcon(_theme);
 }
 
 function updateToggleIcon(theme) {
@@ -29,10 +30,10 @@ function updateToggleIcon(theme) {
 
 function toggleTheme() {
   const root = document.documentElement;
-  const current = root.getAttribute('data-theme');
+  const current = root.getAttribute('data-theme') || _theme || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
+  _theme = next;
   root.setAttribute('data-theme', next);
-  sessionStorage.setItem('theme', next);
   updateToggleIcon(next);
 }
 
@@ -128,13 +129,36 @@ function formatDuration(seconds) {
 /* ─── Modal Helper ───────────────────────────────────────── */
 function openModal(id) {
   const m = document.getElementById(id);
-  if (m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  if (m) {
+    m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function closeModal(id) {
   const m = document.getElementById(id);
-  if (m) { m.style.display = 'none'; document.body.style.overflow = ''; }
+  if (m) {
+    m.style.display = 'none';
+    document.body.style.overflow = '';
+  }
 }
+
+document.addEventListener('click', (e) => {
+  const backdrop = e.target.closest('.modal-backdrop');
+  if (backdrop && e.target === backdrop) {
+    backdrop.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const openModalEl = [...document.querySelectorAll('.modal-backdrop')].find(el => getComputedStyle(el).display !== 'none');
+  if (openModalEl) {
+    openModalEl.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+});
 
 window.AppUtils = {
   getSupabase, initTheme, toggleTheme, showToast,
