@@ -9,7 +9,6 @@ function getSupabase() {
   return _supabase;
 }
 
-/* ─── Theme Toggle ───────────────────────────────────────── */
 function initTheme() {
   const root = document.documentElement;
   if (!_theme) {
@@ -37,7 +36,6 @@ function toggleTheme() {
   updateToggleIcon(next);
 }
 
-/* ─── Toast Notifications ────────────────────────────────── */
 function showToast(message, type = 'default') {
   let container = document.getElementById('toast-container');
   if (!container) {
@@ -60,7 +58,6 @@ function showToast(message, type = 'default') {
   }, 4000);
 }
 
-/* ─── Auth Helpers ───────────────────────────────────────── */
 async function getSession() {
   const sb = getSupabase();
   const { data } = await sb.auth.getSession();
@@ -88,7 +85,6 @@ async function signOut() {
   window.location.href = '/index.html';
 }
 
-/* ─── Notification Channel UI Helper ────────────────────── */
 function initChannelSelector(selectId, fields) {
   const select = document.getElementById(selectId);
   if (!select) return;
@@ -103,7 +99,6 @@ function initChannelSelector(selectId, fields) {
   update();
 }
 
-/* ─── Format Helpers ─────────────────────────────────────── */
 function formatRelativeTime(isoString) {
   if (!isoString) return 'Never';
   const diff = Date.now() - new Date(isoString).getTime();
@@ -126,7 +121,6 @@ function formatDuration(seconds) {
   return `${seconds}s`;
 }
 
-/* ─── Modal Helper ───────────────────────────────────────── */
 function openModal(id) {
   const m = document.getElementById(id);
   if (m) {
