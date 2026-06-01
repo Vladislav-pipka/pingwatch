@@ -721,38 +721,52 @@
     </div>
   </footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const supabaseClient = window.supabase.createClient(
-      'https://xdkzdjlhmktqyagdiizl.supabase.co',
-      'sb_publishable_5Ti0Tdab5FAGcaLCOPjnQJOMIAIf'
-    );
 
-    async function subscribe(plan) {
-      const { data: { session } } = await supabaseClient.auth.getSession();
+    <script>
+      async function subscribe(plan) {
+        const btn = document.getElementById('btn-' + plan);
+        const originalText = btn ? btn.textContent : '';
 
-      if (!session) {
-        window.location.href = 'index.html';
-        return;
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Loading...';
+        }
+
+        try {
+          const session = await AppUtils.getSession();
+
+          if (!session) {
+            window.location.href = 'index.html';
+            return;
+          }
+
+          const res = await fetch('/.netlify/functions/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              plan,
+              userid: session.user.id,
+              email: session.user.email
+            })
+          });
+
+          const data = await res.json();
+
+          if (data.url) {
+            window.location.href = data.url;
+            return;
+          }
+
+          alert(data.error || 'Checkout failed');
+        } catch (e) {
+          alert('Network error. Try again.');
+        }
+
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
       }
-
-      const res = await fetch('/.netlify/functions/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan,
-          userid: session.user.id,
-          email: session.user.email
-        })
-      });
-
-      const data = await res.json();
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || 'Checkout failed');
-      }
-    }
-  </script>
+    </script>
 </body>
 </html>
