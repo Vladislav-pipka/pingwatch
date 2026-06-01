@@ -939,6 +939,9 @@
 
     const update = { notification_channel: ch };
 
+    if (ch === 'email') {
+      update.notification_email = currentUser.email;
+    }
     if (ch === 'telegram') {
       const val = document.getElementById('ch-telegram-id').value.trim();
       if (!val) { err.textContent = 'Please enter your Telegram Chat ID.'; err.style.display = 'block'; return; }
