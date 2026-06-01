@@ -593,7 +593,14 @@
       const bar = document.getElementById('plan-bar');
       bar.style.width = pct + '%';  
       bar.className = 'plan-banner__bar-fill' + (pct >= 100 ? ' plan-banner__bar-fill--full' : pct >= 80 ? ' plan-banner__bar-fill--warn' : '');
-      document.getElementById('plan-bar-label').textContent = used + ' / ' + maxM + ' monitors used';
+      const planBarLabel = document.getElementById('plan-bar-label');
+
+      if (used > maxM) {
+        const extra = used - maxM;
+        planBarLabel.textContent = 'You are over the Free plan limit. Delete ' + extra + ' ' + (extra === 1 ? 'monitor' : 'monitors') + ' or upgrade to add new ones.';
+      } else {
+        planBarLabel.textContent = used + ' / ' + maxM + ' monitors used';
+      }
     }
 
     function renderMonitors(list) {
