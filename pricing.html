@@ -509,84 +509,42 @@
       </div>
     </section>
 
-    <section class="pricing-section" aria-label="Pricing plans">
+    <section class="plan-diff" aria-labelledby="plan-diff-title">
       <div class="container">
-        <div class="plans-grid">
-          <article class="plan-card plan-card--free" aria-labelledby="plan-free">
-            <div class="plan-head">
-              <div class="plan-name" id="plan-free">Free</div>
-              <p class="plan-desc">A simple way to try PingWatch and monitor a small setup.</p>
-              <div class="plan-price">
-                <div class="plan-price__amount">€0</div>
-                <div class="plan-price__period">/ month</div>
-              </div>
-            </div>
+        <div class="plan-diff__card">
+          <div class="plan-diff__intro">
+            <h2 id="plan-diff-title">What changes between plans</h2>
+            <p>
+              The main difference is how many monitors you can run and how much room you have to grow.
+            </p>
+          </div>
 
-            <div class="plan-divider"></div>
-
-            <ul class="plan-list">
-              <li>Up to 2 monitors</li>
-              <li>Instant alerts</li>
-              <li>Down and recovery notifications</li>
-            </ul>
-
-            <div class="plan-actions">
-              <a href="index.html#start" class="btn btn-secondary btn-block">Start free</a>
-              <div class="plan-note">No credit card required.</div>
-            </div>
-          </article>
-
-          <article class="plan-card plan-card--featured" aria-labelledby="plan-pro">
-            <div class="plan-badge">Most popular</div>
-
-            <div class="plan-head">
-              <div class="plan-name" id="plan-pro">Pro</div>
-              <p class="plan-desc">For freelancers, SaaS founders, and small teams that need more coverage.</p>
-              <div class="plan-price">
-                <div class="plan-price__amount">€5</div>
-                <div class="plan-price__period">/ month</div>
-              </div>
-            </div>
-
-            <div class="plan-divider"></div>
-
-            <ul class="plan-list">
-              <li>Up to 10 monitors</li>
-              <li>Instant alerts</li>
-              <li>Down and recovery notifications</li>
-              <li>Priority support</li>
-            </ul>
-
-            <div class="plan-actions">
-              <button class="btn btn-primary btn-block" id="btn-pro" onclick="subscribe('pro')">Get Pro</button>
-              <div class="plan-note">A strong upgrade once 2 monitors are not enough.</div>
-            </div>
-          </article>
-
-          <article class="plan-card plan-card--accent" aria-labelledby="plan-unlimited">
-            <div class="plan-head">
-              <div class="plan-name" id="plan-unlimited">Unlimited</div>
-              <p class="plan-desc">For agencies, larger projects, and anyone who does not want monitor limits.</p>
-              <div class="plan-price">
-                <div class="plan-price__amount">€7</div>
-                <div class="plan-price__period">/ month</div>
-              </div>
-            </div>
-
-            <div class="plan-divider"></div>
-
-            <ul class="plan-list">
-              <li>Unlimited monitors</li>
-              <li>Instant alerts</li>
-              <li>Down and recovery notifications</li>
-              <li>Priority support</li>
-            </ul>
-
-            <div class="plan-actions">
-              <button class="btn btn-primary btn-block" id="btn-unlimited" onclick="subscribe('unlimited')">Get Unlimited</button>
-              <div class="plan-note">Best for client work, many sites, and growing setups.</div>
-            </div>
-          </article>
+          <div class="plan-diff__table-wrap">
+            <table class="plan-diff__table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Free</th>
+                  <th>Pro</th>
+                  <th>Unlimited</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Monitors</td>
+                  <td>2</td>
+                  <td>10</td>
+                  <td>Unlimited</td>
+                </tr>
+                <tr>
+                  <td>Priority support</td>
+                  <td>—</td>
+                  <td>Included</td>
+                  <td>Included</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
