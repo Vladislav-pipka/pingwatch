@@ -10,8 +10,8 @@ exports.handler = async (event) => {
     const { plan, user_id, email } = JSON.parse(event.body);
 
     const PRICE_IDS = {
-      pro: 'price_1TS0fHH7w95uyPVpwlIDBr7R',
-      unlimited: 'price_1TS0frH7w95uyPVpqseFCoQz',
+      pro: 'price_1TVJBKH6KbqcVzkR4KnfydIi',
+      unlimited: 'price_1TVJBLH6KbqcVzkRWXldbzfe',
     };
 
     if (!PRICE_IDS[plan]) {
