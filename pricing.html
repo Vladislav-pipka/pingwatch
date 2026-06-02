@@ -736,7 +736,11 @@
           const session = await AppUtils.getSession();
 
           if (!session) {
-            window.location.href = 'index.html';
+            alert('No session on pricing page');
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
             return;
           }
 
