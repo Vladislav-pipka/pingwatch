@@ -745,7 +745,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               plan,
-              userid: session.user.id,
+              user_id: session.user.id,
               email: session.user.email
             })
           });
