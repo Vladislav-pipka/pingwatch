@@ -746,7 +746,8 @@
         if (errEl) errEl.hidden = true;
 
         const name = addNameEl ? addNameEl.value.trim() : '';
-        const url = addUrlEl ? addUrlEl.value.trim() : '';
+        const rawUrl = addUrlEl ? addUrlEl.value.trim() : '';
+        let normalizedUrl = rawUrl;
 
         const maxAllowed = userPlan === 'pro' ? 10 : userPlan === 'unlimited' ? Infinity : 2;
 
@@ -766,7 +767,7 @@
           return;
         }
 
-        if (!url) {
+        if (!rawUrl) {
           if (errEl) {
             errEl.textContent = 'URL is required.';
             errEl.hidden = false;
@@ -774,8 +775,12 @@
           return;
         }
 
+        if (!/^https?:\/\//i.test(normalizedUrl)) {
+          normalizedUrl = 'https://' + normalizedUrl;
+        }
+
         try {
-          new URL(url);
+          new URL(normalizedUrl);
         } catch {
           if (errEl) {
             errEl.textContent = 'Enter a valid URL (e.g. https://example.com)';
