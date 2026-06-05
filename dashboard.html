@@ -796,7 +796,7 @@
         const { error } = await sb.from('monitors').insert({
           user_id: currentUser.id,
           name,
-          url,
+          url: normalizedUrl,
           is_active: true,
           last_status: null,
           last_checked_at: null
