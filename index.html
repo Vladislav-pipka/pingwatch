@@ -1,20 +1,106 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+  <!-- Verification -->
   <meta name="google-site-verification" content="NLObV4CKzs2e0BQ2pPznWx4xJxw_tzCGpHHRME5PzMA" />
-  <meta charset="UTF-8" />
-  <meta name="description" content="PingWatch monitors your website 24/7 and sends instant alerts via Telegram, Discord, Slack or email when it goes down. Free plan available." />
-  <meta name="keywords" content="uptime monitor, website monitoring, downtime alerts, ping monitor, free uptime checker" />
 
-  <!-- Open Graph (для соцсетей) -->
-  <meta property="og:title" content="PingWatch — Website Uptime Monitoring" />
-  <meta property="og:description" content="Know when your site goes down Instant alerts via Telegram, Discord, Slack or email." />
-  <meta property="og:url" content="https://pingwatch.netlify.app" />
-  <meta property="og:type" content="website" />
-  <meta name="google-site-verification" content="dbUBBiAKEMAqNyPaxtF9EHpiMi58Q6Sk18d2-eS8ZVE" />
+  <!-- Base -->
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PingWatch — Uptime Monitoring</title>
-  <meta name="description" content="Monitor your websites. Get instant alerts on Telegram, Discord, Slack, or Email when something goes down." />
+  <title>PingWatch — Simple Uptime Monitoring, Uptime Kuma Alternative</title>
+  <meta name="description" content="PingWatch monitors your website 24/7 and sends instant alerts via Telegram, Discord, Slack or email when it goes down. No server needed. Free plan available." />
+  <meta name="keywords" content="uptime monitor, website monitoring, uptime kuma alternative, downtime alerts, telegram downtime alerts, ping monitor, free uptime checker" />
+  <link rel="canonical" href="https://pingwatch.org" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="PingWatch — Simple Uptime Monitoring" />
+  <meta property="og:description" content="Know instantly when your site goes down. Alerts via Telegram, Discord, Slack or Email. No server, no Docker. Setup in 2 minutes." />
+  <meta property="og:url" content="https://pingwatch.org" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="PingWatch" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="PingWatch — Simple Uptime Monitoring" />
+  <meta name="twitter:description" content="Know instantly when your site goes down. Alerts via Telegram, Discord, Slack or Email. No server needed." />
+
+  <!-- Schema.org: SoftwareApplication (для SEO и AEO) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "PingWatch",
+    "url": "https://pingwatch.org",
+    "description": "PingWatch is a hosted uptime monitoring service. It checks your websites every 5 minutes and sends instant alerts via Telegram, Discord, Slack, or Email when your site goes down — including the reason why. No server or Docker required. Simple alternative to Uptime Kuma.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free plan available. Unlimited monitors for $7/month."
+    },
+    "featureList": [
+      "Website uptime monitoring every 5 minutes",
+      "Telegram downtime alerts",
+      "Discord downtime alerts",
+      "Slack downtime alerts",
+      "Email downtime alerts",
+      "Downtime reason included in alerts",
+      "Recovery notifications",
+      "No self-hosting required",
+      "No Docker needed"
+    ],
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Indie developers, startups, small businesses"
+    }
+  }
+  </script>
+
+  <!-- Schema.org: FAQPage (для AEO — ИИ это читает) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is the easiest alternative to Uptime Kuma?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "PingWatch is a hosted alternative to Uptime Kuma that requires no server, no Docker, and no self-hosting. You sign up in under 2 minutes and start monitoring your websites immediately."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does PingWatch send Telegram alerts when a website goes down?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. PingWatch sends instant Telegram alerts the moment your site goes down, including the specific reason for the outage — not just a generic 'site is down' message."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How much does PingWatch cost?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "PingWatch has a free plan. Unlimited monitors cost $7 per month."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need a server to use PingWatch?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. PingWatch is fully hosted. Unlike Uptime Kuma, you do not need a VPS, Docker, or any server. Just sign up and add your URL."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Fonts & Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Geist+Mono:wght@300..700&display=swap" rel="stylesheet" />
