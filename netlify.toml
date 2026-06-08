@@ -14,5 +14,29 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+[[redirects]]
+  from = "/pricing.html"
+  to = "/pricing"
+  status = 301
+
+[[redirects]]
+  from = "/telegram-alerts.html"
+  to = "/telegram-alerts"
+  status = 301
+
+[[redirects]]
+  from = "/free-uptime-monitoring.html"
+  to = "/free-uptime-monitoring"
+  status = 301
+
+[[redirects]]
+  from = "/api-uptime-monitoring.html"
+  to = "/api-uptime-monitoring"
+  status = 301
+
+[[redirects]]
+  from = "/status.html"
+  to = "/status"
+  status = 301
 [functions."check-monitors"]
   schedule = "*/5 * * * *"
