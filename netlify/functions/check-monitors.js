@@ -158,15 +158,17 @@ async function notifySlack(webhookUrl, text) {
 
 async function notifyEmail(to, subject, text) {
   const transport = nodemailer.createTransport({
-    service: 'gmail',
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT) === 465,
     auth: {
-      user: process.env.SMTP_EMAIL,
-      pass: process.env.SMTP_PASSWORD,
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
   });
 
   await transport.sendMail({
-    from: `PingWatch <${process.env.SMTP_EMAIL}>`,
+    from: `PingWatch <${process.env.SMTP_FROM}>`,
     to,
     subject,
     text,
