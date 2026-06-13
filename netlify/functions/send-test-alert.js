@@ -31,6 +31,18 @@ async function notifySlack(webhookUrl, text) {
 }
 
 async function notifyEmail(email, text) {
+    if (!process.env.SMTP_HOST) {
+      throw new Error('SMTP_HOST is not set');
+    }
+    if (!process.env.SMTP_PORT) {
+      throw new Error('SMTP_PORT is not set');
+    }
+    if (!process.env.SMTP_USER) {
+      throw new Error('SMTP_USER is not set');
+    }
+    if (!process.env.SMTP_PASS) {
+      throw new Error('SMTP_PASS is not set');
+    }
   const transport = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587'),
