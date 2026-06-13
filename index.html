@@ -705,7 +705,8 @@
         if (error) throw error;
 
         await new Promise(r => setTimeout(r, 800));
-
+        const defaultNotificationEmail = channel === 'email' ? notifEmail : email;
+        
         const { error: pe } = await sb.from('users').update({
           notification_channel: channel,
           telegram_chat_id:     channel === 'telegram' ? tgId      : null,
