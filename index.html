@@ -707,9 +707,11 @@
       const discord = document.getElementById('reg-discord').value.trim();
       const slackUrl   = document.getElementById('reg-slack').value.trim();
       const notifEmail = document.getElementById('reg-notif-email').value.trim();
+      const source = document.getElementById('reg-source').value.trim()
 
       if (!email || !pass) { setErr('reg-err', 'Email and password are required.'); return; }
       if (pass.length < 8) { setErr('reg-err', 'Password must be at least 8 characters.'); return; }
+      if (!source) { setErr('reg-err', 'Please select how you heard about PingWatch.'); return; }
       if (channel === 'telegram' && !tgId)      { setErr('reg-err', 'Enter your Telegram Chat ID.'); return; }
       if (channel === 'discord'  && !discord)   { setErr('reg-err', 'Enter your Discord Webhook URL.'); return; }
       if (channel === 'slack'    && !slackUrl)  { setErr('reg-err', 'Enter your Slack Webhook URL.'); return; }
@@ -726,6 +728,7 @@
         const defaultNotificationEmail = channel === 'email' ? notifEmail : email;
         
         const { error: pe } = await sb.from('users').upsert({
+          signup_source: source,
           id: data.user.id,
           email: email,
           notification_channel: channel,
