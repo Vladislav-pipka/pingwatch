@@ -358,6 +358,7 @@
   }
 }
 </script>
+<script async src="https://uppercut.co/uc.js" data-uppercut="365b5ef2-5e25-485a-862a-79f7c4433db6"></script>
 </head>
 <body>
   
@@ -743,7 +744,9 @@
           notification_email: channel === 'email' ? notifEmail : email,
         }, { onConflict: 'id' });
         if (pe) throw pe;
-
+        if (window.Uppercut && typeof Uppercut.signup === 'function') {
+          Uppercut.signup(email);
+        }
         AppUtils.showToast('Account created!', 'success');
         setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
       } catch(err) {
