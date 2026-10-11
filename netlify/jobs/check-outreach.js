@@ -17,7 +17,7 @@ exports.handler = async function () {
 
   const { data: sites, error } = await sb
     .from('outreach_sites')
-    .select('id, domain, url, last_status')
+    .select('id, domain, url, last_status, checks_total, checks_up')
     .eq('is_active', true)
     .order('last_checked_at', { ascending: true, nullsFirst: true })
     .limit(MAX_SITES_PER_RUN);
@@ -32,21 +32,25 @@ exports.handler = async function () {
     sites,
     async (site) => {
       // Re-check failures before we believe them — we must never email someone about a fake outage.
-      const r = site.last_status === 'DOWN'
-        ? await ping(site.url, 7000)
-        : await pingConfirmed(site.url, { timeoutMs: 7000, retryDelayMs: 1500, retryTimeoutMs: 5000 });
+      // No 30s limit on GitHub Actions, so give slow sites a fair 10s (+ a second try).
+      const r = (site.last_status === 'DOWN' || site.last_status === 'BROKEN')
+        ? await ping(site.url, 10000)
+        : await pingConfirmed(site.url, { timeoutMs: 10000, retryDelayMs: 3000, retryTimeoutMs: 10000 });
       return { site, r, at: new Date().toISOString() };
     },
     { concurrency: CONCURRENCY, deadlineMs: DEADLINE_MS }
   );
 
   const rows = [];
-  let down = 0, blocked = 0, dead = 0;
+  let down = 0, blocked = 0, dead = 0, broken = 0;
 
   for (const item of checked) {
     if (!item || item.error || !item.site) continue;
     const { site, r, at } = item;
-    const prev = site.last_status;
+    // A site that never answered OK since we added it isn't "down" — it's broken/abandoned.
+    // Only a site that WAS up and then failed counts as an outage worth emailing about.
+    const everUp = (site.checks_up || 0) > 0;
+    const prev = (site.last_status === 'DOWN' && !everUp) ? 'BROKEN' : site.last_status;
 
     const row = {
       id: site.id,
@@ -75,12 +79,22 @@ exports.handler = async function () {
       row.is_active = false;
       row.add_total = 0;
       dead++;
-    } else {
+    } else if (prev === 'UP' || prev === 'DOWN') {
+      // Real outage: it worked before, now it doesn't.
       row.last_status = 'DOWN';
-      row.open_incident = prev !== 'DOWN';
+      row.open_incident = prev === 'UP';
       row.error_reason = r.reason;
       row.error_details = r.details;
       down++;
+    } else {
+      // Never seen up (first check failed, or still failing since). Keep watching for a while
+      // in case it comes back; after ~36 failed checks (≈6 hours) give up on it.
+      row.last_status = 'BROKEN';
+      if ((site.checks_total || 0) + 1 >= 36) {
+        row.last_status = 'DEAD';
+        row.is_active = false;
+      }
+      broken++;
     }
     rows.push(row);
   }
@@ -94,6 +108,6 @@ exports.handler = async function () {
   }
 
   const skipped = checked.filter((x) => x === undefined).length;
-  console.log(`[outreach] checked=${rows.length} down=${down} blocked=${blocked} dead=${dead} skipped=${skipped}`);
-  return { statusCode: 200, body: JSON.stringify({ checked: rows.length, down, blocked, dead, skipped }) };
+  console.log(`[outreach] checked=${rows.length} down=${down} broken=${broken} blocked=${blocked} dead=${dead} skipped=${skipped}`);
+  return { statusCode: 200, body: JSON.stringify({ checked: rows.length, down, broken, blocked, dead, skipped }) };
 };

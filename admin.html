@@ -33,7 +33,7 @@
     th { border-top: none; color: var(--color-text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
     td .muted { color: var(--color-text-muted); font-size: 12px; }
     .dot { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
-    .UP { color: var(--color-success); } .DOWN { color: var(--color-notification); } .BLOCKED, .DEAD, .NEW { color: var(--color-text-faint); }
+    .UP { color: var(--color-success); } .DOWN { color: var(--color-notification); } .BLOCKED, .DEAD, .NEW, .BROKEN { color: var(--color-text-faint); }
     td select, td input { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 6px; padding: 4px 6px; font-size: 12px; width: 100%; }
     .acts { display: flex; gap: 6px; flex-wrap: wrap; }
     .acts .btn { padding: 4px 9px; font-size: 12px; }
@@ -223,7 +223,8 @@
 
     /* ── filters + table ── */
     const FILTERS = {
-      outages:   { label: 'Had outages',  test: s => s.incidents_count > 0 && s.stage === 'watching' },
+      // Only sites that were up at some point and then failed — never-working sites are not outages.
+      outages:   { label: 'Had outages',  test: s => s.incidents_count > 0 && s.checks_up > 0 && s.stage === 'watching' },
       watching:  { label: 'All watching', test: s => s.is_active && s.stage === 'watching' },
       contacted: { label: 'Contacted',    test: s => s.stage === 'contacted' },
       replied:   { label: 'Replied / signed up', test: s => s.stage === 'replied' || s.stage === 'signed_up' },
