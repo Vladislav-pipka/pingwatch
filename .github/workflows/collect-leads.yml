@@ -1,0 +1,42 @@
+name: Collect leads
+
+# Finds young projects (Show HN launches, indie/SaaS repos on GitHub) and adds their
+# sites to the outreach watchlist. Runs weekly by itself, or press "Run workflow".
+on:
+  schedule:
+    - cron: '17 6 * * 1'     # every Monday ~06:17 UTC, picks up the last 2 weeks
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'How many days back to look'
+        default: '120'
+      max:
+        description: 'Max new sites to add'
+        default: '500'
+      sources:
+        description: 'Sources (hn,github)'
+        default: 'hn,github'
+
+concurrency:
+  group: collect-leads
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=dev
+      - run: node scripts/collect-leads.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          LEADS_DAYS: ${{ inputs.days || '14' }}
+          LEADS_MAX: ${{ inputs.max || '300' }}
+          LEADS_SOURCES: ${{ inputs.sources || 'hn,github' }}

@@ -59,6 +59,9 @@ Database changes live in `supabase/*.sql` — run them in the Supabase SQL Edito
 `/admin.html` — add candidate sites, PingWatch checks them quietly (`netlify/jobs/check-outreach.js`, every ~10 min on GitHub Actions — not on Netlify, to save credits),
 confirmed outages show up with a ready-to-send email and a private report page at `/r/<slug>`.
 
+New candidates are collected by `scripts/collect-leads.js` (GitHub Actions → *Collect leads*, weekly or manual):
+Show HN launches and homepages of indie/SaaS repos on GitHub, with free-hosting and big-platform domains filtered out.
+
 ---
 
 Built by [@Vladislav-pipka](https://github.com/Vladislav-pipka)
