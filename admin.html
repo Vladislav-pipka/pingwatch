@@ -161,8 +161,14 @@
     }
 
     (async () => {
-      const user = await AppUtils.requireAuth();
-      if (!user) return;
+      const session = await AppUtils.getSession();
+      if (!session) {
+        // Don't silently bounce to the home page — say what's wrong.
+        const d = document.getElementById('denied');
+        d.style.display = 'block';
+        d.innerHTML = 'You are not signed in in this browser. <a href="/#start" style="color:var(--color-primary)">Sign in</a>, then open <b>Dashboard → Outreach</b>.';
+        return;
+      }
       try {
         await load();
         document.getElementById('app').style.display = 'block';
