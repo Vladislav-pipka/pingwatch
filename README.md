@@ -56,7 +56,7 @@ Database changes live in `supabase/*.sql` — run them in the Supabase SQL Edito
 
 ## Outreach
 
-`/admin.html` — add candidate sites, PingWatch checks them quietly (`check-outreach`, every 5 min),
+`/admin.html` — add candidate sites, PingWatch checks them quietly (`netlify/jobs/check-outreach.js`, every ~10 min on GitHub Actions — not on Netlify, to save credits),
 confirmed outages show up with a ready-to-send email and a private report page at `/r/<slug>`.
 
 ---

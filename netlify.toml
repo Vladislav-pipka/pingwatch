@@ -41,9 +41,6 @@
 [functions."check-monitors"]
   schedule = "*/5 * * * *"
 
-[functions."check-outreach"]
-  schedule = "*/5 * * * *"
-
 # Public downtime reports for outreach: pingwatch.org/r/<slug>
 [[redirects]]
   from = "/r/:slug"

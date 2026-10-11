@@ -1,11 +1,13 @@
 // Quietly checks outreach candidate sites (not customers — nobody gets alerts from this).
-// Runs every 5 minutes. Each run checks the sites that waited longest, as many as fit
-// into Netlify's ~30s limit, so with a few hundred sites each one is checked every ~10–20 min.
+// Runs on GitHub Actions (free for public repos), NOT on Netlify — on Netlify's free plan
+// these checks would eat most of the 300 monthly credits. See .github/workflows/outreach-checks.yml
 
 const { createClient } = require('@supabase/supabase-js');
 const { ping, pingConfirmed, runPool } = require('../lib/ping');
 
-const MAX_SITES_PER_RUN = 400;
+const MAX_SITES_PER_RUN = Number(process.env.OUTREACH_MAX_SITES || 3000);
+const DEADLINE_MS = Number(process.env.OUTREACH_DEADLINE_MS || 240000);
+const CONCURRENCY = Number(process.env.OUTREACH_CONCURRENCY || 40);
 
 exports.handler = async function () {
   const sb = createClient(
@@ -35,7 +37,7 @@ exports.handler = async function () {
         : await pingConfirmed(site.url, { timeoutMs: 7000, retryDelayMs: 1500, retryTimeoutMs: 5000 });
       return { site, r, at: new Date().toISOString() };
     },
-    { concurrency: 40, deadlineMs: 12000 }
+    { concurrency: CONCURRENCY, deadlineMs: DEADLINE_MS }
   );
 
   const rows = [];
