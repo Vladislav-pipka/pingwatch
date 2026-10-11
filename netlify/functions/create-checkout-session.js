@@ -21,15 +21,21 @@ exports.handler = async (event) => {
       };
     }
 
+    const SITE_URL = (process.env.SITE_URL || 'https://pingwatch.org').replace(/\/+$/, '');
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer_email: email || undefined,
       line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
-      success_url: 'https://pingwatch.netlify.app/dashboard.html?subscribed=true',
-      cancel_url: 'https://pingwatch.netlify.app/pricing.html',
+      success_url: `${SITE_URL}/dashboard?subscribed=true`,
+      cancel_url: `${SITE_URL}/pricing`,
       metadata: {
         userId: user_id || '',
         plan: plan || 'free',
+      },
+      // Keep the plan on the subscription itself, so later "subscription.updated" events know it.
+      subscription_data: {
+        metadata: { userId: user_id || '', plan: plan || 'free' },
       },
     });
 

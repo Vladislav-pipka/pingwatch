@@ -342,7 +342,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "PingWatch",
-  "url": "https://pingwatch.netlify.app",
+  "url": "https://pingwatch.org",
   "applicationCategory": "WebApplication",
   "operatingSystem": "Web",
   "description": "Uptime monitoring SaaS that checks your websites every minute and sends instant alerts via Telegram, Discord, Slack, or email when they go down.",
@@ -486,6 +486,7 @@
                       <option value="github">GitHub</option>
                       <option value="blog_article">Blog / article</option>
                       <option value="newsletter">Newsletter</option>
+                      <option value="outreach">Email from PingWatch / downtime report</option>
                       <option value="other">Other</option>
                     </select>
                   </div>
@@ -501,12 +502,13 @@
 
                   <!-- Telegram -->
                   <div class="form-group channel-extra visible" id="extra-telegram">
-                    <label class="form-label" for="reg-tg">Telegram Chat ID</label>
-                    <input class="form-input" type="text" id="reg-tg" placeholder="123456789"/>
-                    <span class="hint" style="display:block;background:oklch(0.85 0.12 85 / 0.15);border:1px solid oklch(0.75 0.12 85 / 0.4);border-radius:6px;padding:8px 10px;color:var(--color-text)">
-  ⚠️ <strong>Important:</strong> Open <strong>@userinfobot</strong> in Telegram, send <code>/start</code> — copy the <em>Id</em> number.<br>
-  Then find <strong>@S1te_Watch_Bot</strong> and press Start — otherwise alerts won't be delivered.
+                    <span class="hint" style="display:block;background:oklch(0.75 0.15 150 / 0.12);border:1px solid oklch(0.7 0.15 150 / 0.35);border-radius:6px;padding:8px 10px;color:var(--color-text)">
+  ✓ No setup needed now. Right after sign-up you connect Telegram with <strong>one click</strong>.
                     </span>
+                    <details style="font-size:var(--text-xs);margin-top:6px">
+                      <summary style="cursor:pointer;color:var(--color-text-muted)">I already know my Chat ID</summary>
+                      <input class="form-input" type="text" id="reg-tg" placeholder="123456789" style="margin-top:6px"/>
+                    </details>
                   </div>
 
                   <!-- Discord -->
@@ -670,6 +672,25 @@
       panelLogin.classList.add('active'); panelReg.classList.remove('active');
     });
 
+    // Came from a downtime report link (?url=example.com): remember the site and add it after sign-up.
+    (function rememberPendingUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const url = (params.get('url') || '').trim();
+      if (params.get('ref') === 'report') {
+        const src = document.getElementById('reg-source');
+        if (src) src.value = 'outreach';
+      }
+      if (!url || url.length > 300) return;
+      try { localStorage.setItem('pw_pending_url', url); } catch (_) {}
+      const form = document.getElementById('form-reg');
+      if (form) {
+        const note = document.createElement('p');
+        note.style.cssText = 'margin-bottom:12px;font-size:var(--text-sm);color:var(--color-text-muted)';
+        note.textContent = 'We will start monitoring ' + url.replace(/^https?:\/\//, '') + ' right after you sign up.';
+        form.prepend(note);
+      }
+    })();
+
     // Channel field switching
     const channelSelect = document.getElementById('reg-channel');
     function syncChannelFields() {
@@ -712,7 +733,6 @@
       if (!email || !pass) { setErr('reg-err', 'Email and password are required.'); return; }
       if (pass.length < 8) { setErr('reg-err', 'Password must be at least 8 characters.'); return; }
       if (!source) { setErr('reg-err', 'Please select how you heard about PingWatch.'); return; }
-      if (channel === 'telegram' && !tgId)      { setErr('reg-err', 'Enter your Telegram Chat ID.'); return; }
       if (channel === 'discord'  && !discord)   { setErr('reg-err', 'Enter your Discord Webhook URL.'); return; }
       if (channel === 'slack'    && !slackUrl)  { setErr('reg-err', 'Enter your Slack Webhook URL.'); return; }
       if (channel === 'email'    && !notifEmail){ setErr('reg-err', 'Enter your notification email.'); return; }
@@ -748,7 +768,8 @@
           Uppercut.signup(email);
         }
         AppUtils.showToast('Account created!', 'success');
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+        const next = (channel === 'telegram' && !tgId) ? 'dashboard.html?connect=telegram' : 'dashboard.html';
+        setTimeout(() => { window.location.href = next; }, 900);
       } catch(err) {
         setErr('reg-err', err.message || 'Registration failed.');
       } finally {

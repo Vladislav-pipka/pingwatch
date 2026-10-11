@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
+const { getUserFromEvent } = require('../lib/auth');
 
 const sb = createClient(
   process.env.SUPABASE_URL,
@@ -7,11 +8,15 @@ const sb = createClient(
 );
 
 async function notifyTelegram(token, chatId, text) {
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
   });
+  if (!res.ok) {
+    const bot = (process.env.TELEGRAM_BOT_USERNAME || 'S1te_Watch_Bot').replace(/^@/, '');
+    throw new Error(`Telegram could not deliver the message. Open @${bot} and press Start, or use "Connect Telegram" again.`);
+  }
 }
 
 async function notifyDiscord(webhookUrl, text) {
@@ -65,15 +70,12 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  let body;
-  try { body = JSON.parse(event.body); } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+  // SECURITY: use the verified login token, not a user_id from the body.
+  const authUser = await getUserFromEvent(sb, event);
+  if (!authUser) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Not signed in' }) };
   }
-
-  const { user_id } = body;
-  if (!user_id) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing user_id' }) };
-  }
+  const user_id = authUser.id;
 
   const { data: user, error } = await sb
     .from('users')
