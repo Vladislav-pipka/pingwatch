@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>PingWatch — Outreach</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Geist+Mono:wght@300..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/style.css" />
+  <style>
+    body { background: var(--color-bg); }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 64px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .top h1 { font-size: 22px; margin: 0; }
+    .top a { color: var(--color-text-muted); font-size: 14px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 14px; }
+    .stat b { display: block; font-size: 22px; font-family: var(--font-mono); }
+    .stat span { font-size: 12px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+    .panel h2 { font-size: 15px; margin: 0 0 10px; }
+    .add-grid { display: grid; grid-template-columns: 1fr 260px; gap: 12px; }
+    @media (max-width: 760px) { .add-grid { grid-template-columns: 1fr; } }
+    textarea.form-input { min-height: 110px; font-family: var(--font-mono); font-size: 13px; resize: vertical; }
+    .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .filters button { border: 1px solid var(--color-border); background: transparent; color: var(--color-text-muted); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+    .filters button.on { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-inverse); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 980px; }
+    th, td { text-align: left; padding: 10px 10px; border-top: 1px solid var(--color-border); vertical-align: top; }
+    th { border-top: none; color: var(--color-text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+    td .muted { color: var(--color-text-muted); font-size: 12px; }
+    .dot { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+    .UP { color: var(--color-success); } .DOWN { color: var(--color-notification); } .BLOCKED, .DEAD, .NEW { color: var(--color-text-faint); }
+    td select, td input { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 6px; padding: 4px 6px; font-size: 12px; width: 100%; }
+    .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .acts .btn { padding: 4px 9px; font-size: 12px; }
+    .empty { padding: 40px; text-align: center; color: var(--color-text-muted); }
+    .modal { max-width: 720px; width: 100%; }
+    .lang { display: flex; gap: 6px; margin-bottom: 10px; }
+    textarea.form-input.email-body { min-height: 320px; }
+    #modal-email .modal__body { max-height: 70vh; overflow-y: auto; }
+    td a { color: var(--color-primary); }
+    .hint { font-size: 12px; color: var(--color-text-muted); }
+  </style>
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    window.SUPABASE_URL = 'https://xdkzdjlhmktqyagdiizl.supabase.co';
+    window.SUPABASE_KEY = 'sb_publishable_5_Ti0Tdab5FAGcaLCOPjnQ_JOMI_AIf';
+  </script>
+  <script src="assets/app.js"></script>
+  <script>AppUtils.initTheme();</script>
+
+  <div class="wrap">
+    <div class="top">
+      <h1>Outreach</h1>
+      <a href="dashboard.html">← Dashboard</a>
+    </div>
+
+    <div id="denied" class="panel" style="display:none"></div>
+
+    <div id="app" style="display:none">
+      <div class="stats" id="stats"></div>
+
+      <div class="panel">
+        <h2>Add sites to watch</h2>
+        <div class="add-grid">
+          <textarea class="form-input" id="add-lines" placeholder="One site per line:&#10;example.com&#10;https://shop.example.lv&#10;www.another-site.com"></textarea>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input class="form-input" id="add-source" placeholder="Source (e.g. TG chat name, catalog)" />
+            <button class="btn btn-primary" id="add-btn">Add to watchlist</button>
+            <p class="hint" id="add-result">Sites are checked quietly every 10–20 minutes. Nobody gets notified.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters" id="filters"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:20%">Site</th>
+              <th>Now</th>
+              <th>Uptime</th>
+              <th>Outages 30d</th>
+              <th style="width:20%">Last outage</th>
+              <th style="width:12%">Stage</th>
+              <th style="width:16%">Contact email</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email modal -->
+  <div id="modal-email" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 class="modal__title" id="em-title">Email</h3>
+        <button class="btn btn-ghost btn-sm" onclick="AppUtils.closeModal('modal-email')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal__body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="lang">
+          <button class="btn btn-sm btn-primary" id="lang-en" onclick="setLang('en')">English</button>
+          <button class="btn btn-sm btn-secondary" id="lang-ru" onclick="setLang('ru')">Русский</button>
+        </div>
+        <label class="form-label">Subject</label>
+        <input class="form-input" id="em-subject" />
+        <label class="form-label">Message</label>
+        <textarea class="form-input email-body" id="em-body"></textarea>
+        <details>
+          <summary class="hint" style="cursor:pointer">Signature</summary>
+          <textarea class="form-input" id="em-signature" style="min-height:60px;margin-top:6px"></textarea>
+        </details>
+        <p class="hint">Send it yourself from your mailbox — personal emails land in the inbox, mass mailers land in spam. 5–10 a day is plenty.</p>
+      </div>
+      <div class="modal__footer" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="copyField('em-subject')">Copy subject</button>
+          <button class="btn btn-secondary btn-sm" onclick="copyField('em-body')">Copy message</button>
+          <a class="btn btn-secondary btn-sm" id="em-mailto" href="#">Open in mail app</a>
+        </div>
+        <button class="btn btn-primary btn-sm" id="em-contacted">Mark as contacted</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" role="status" aria-live="polite"></div>
+
+  <script>
+    let SITES = [];
+    let FILTER = 'outages';
+    let EM_SITE = null;
+    let EM_LANG = 'en';
+
+    const STAGES = {
+      watching: 'Watching', contacted: 'Contacted', replied: 'Replied',
+      signed_up: 'Signed up ✓', not_interested: 'Not interested'
+    };
+    const DEFAULT_SIGNATURE = 'Vladislav\nPingWatch — https://pingwatch.org';
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    async function api(action, payload = {}) {
+      const session = await AppUtils.getSession();
+      const resp = await fetch('/.netlify/functions/outreach-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session ? session.access_token : '') },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { const e = new Error(data.error || ('HTTP ' + resp.status)); e.status = resp.status; throw e; }
+      return data;
+    }
+
+    (async () => {
+      const user = await AppUtils.requireAuth();
+      if (!user) return;
+      try {
+        await load();
+        document.getElementById('app').style.display = 'block';
+      } catch (e) {
+        const d = document.getElementById('denied');
+        d.style.display = 'block';
+        d.textContent = e.status === 403
+          ? 'This page is only for the PingWatch admin. (Your email must be in ADMIN_EMAILS in Netlify.)'
+          : 'Could not load: ' + e.message;
+      }
+    })();
+
+    async function load() {
+      const data = await api('list');
+      SITES = data.sites || [];
+      render();
+    }
+
+    /* ── helpers ── */
+    function uptime(s) {
+      if (!s.checks_total) return '—';
+      const u = 100 * s.checks_up / s.checks_total;
+      return (u >= 99.995 ? '100' : u.toFixed(2)) + '%';
+    }
+    function durText(sec, lang) {
+      if (sec == null) return lang === 'ru' ? 'до сих пор недоступен' : 'still down';
+      const m = Math.max(1, Math.round(sec / 60));
+      if (lang === 'ru') return m < 60 ? `~${m} мин` : `~${Math.floor(m/60)} ч ${m%60 ? (m%60) + ' мин' : ''}`.trim();
+      return m < 60 ? `~${m} min` : `~${Math.floor(m/60)} h ${m%60 ? (m%60) + ' min' : ''}`.trim();
+    }
+    function dateText(iso, lang) {
+      const d = new Date(iso);
+      const opts = { timeZone: 'UTC', month: lang === 'ru' ? 'long' : 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
+      return d.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-GB', opts) + ' UTC';
+    }
+    function shortDate(iso, lang) {
+      return new Date(iso).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { timeZone: 'UTC', month: lang === 'ru' ? 'long' : 'short', day: 'numeric' });
+    }
+    const REASON_RU = {
+      'Request timeout': 'сервер не ответил вовремя', 'DNS failure': 'домен не открывался (DNS)',
+      'SSL / TLS error': 'ошибка SSL-сертификата', 'Connection refused': 'сервер отклонил соединение',
+      'Connection reset': 'сервер оборвал соединение', 'Connection failed': 'сайт не открывался',
+      'Internal server error': 'внутренняя ошибка сервера', 'Server error': 'ошибка сервера',
+      'Bad gateway': 'ошибка шлюза', 'Service unavailable': 'сервис недоступен',
+      'Gateway timeout': 'таймаут шлюза', 'Page not found': 'страница не найдена', 'Client error': 'ошибка запроса'
+    };
+    function reasonText(inc, lang) {
+      const r = inc.error_reason || 'Unreachable';
+      const base = lang === 'ru' ? (REASON_RU[r] || r) : r;
+      return inc.status_code ? `${base}, HTTP ${inc.status_code}` : base;
+    }
+
+    /* ── filters + table ── */
+    const FILTERS = {
+      outages:   { label: 'Had outages',  test: s => s.incidents_count > 0 && s.stage === 'watching' },
+      watching:  { label: 'All watching', test: s => s.is_active && s.stage === 'watching' },
+      contacted: { label: 'Contacted',    test: s => s.stage === 'contacted' },
+      replied:   { label: 'Replied / signed up', test: s => s.stage === 'replied' || s.stage === 'signed_up' },
+      inactive:  { label: 'Inactive (blocked / dead)', test: s => !s.is_active },
+      all:       { label: 'All', test: () => true },
+    };
+
+    function render() {
+      const active = SITES.filter(s => s.is_active);
+      const counts = {
+        watched: active.length,
+        outages: SITES.filter(FILTERS.outages.test).length,
+        contacted: SITES.filter(s => s.stage === 'contacted').length,
+        replied: SITES.filter(s => s.stage === 'replied').length,
+        signed: SITES.filter(s => s.stage === 'signed_up').length,
+      };
+      document.getElementById('stats').innerHTML = [
+        ['Watching', counts.watched], ['Ready to email', counts.outages], ['Contacted', counts.contacted],
+        ['Replied', counts.replied], ['Signed up', counts.signed]
+      ].map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+
+      document.getElementById('filters').innerHTML = Object.entries(FILTERS).map(([k, f]) =>
+        `<button class="${k === FILTER ? 'on' : ''}" onclick="setFilter('${k}')">${f.label} (${SITES.filter(f.test).length})</button>`
+      ).join('');
+
+      const list = SITES.filter(FILTERS[FILTER].test).sort((a, b) => {
+        const la = a.incidents[0] ? a.incidents[0].started_at : '';
+        const lb = b.incidents[0] ? b.incidents[0].started_at : '';
+        return lb.localeCompare(la) || (b.created_at || '').localeCompare(a.created_at || '');
+      });
+
+      const tbody = document.getElementById('rows');
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty">${FILTER === 'outages'
+          ? 'No outages caught yet. Add more sites — small business sites on cheap hosting go down most often.'
+          : 'Nothing here.'}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(s => {
+        const st = s.last_status || 'NEW';
+        const last = s.incidents[0];
+        const lastHtml = last
+          ? `${esc(dateText(last.started_at, 'en'))}<div class="muted">${esc(durText(last.resolved_at ? last.duration_seconds : null, 'en'))} · ${esc(reasonText(last, 'en'))}</div>`
+          : '<span class="muted">—</span>';
+        return `<tr>
+          <td><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.domain)}</a>
+            <div class="muted">${esc(s.source || '')}</div>
+            <input placeholder="notes" value="${esc(s.notes || '')}" onchange="save('${s.id}', { notes: this.value })" style="margin-top:4px" /></td>
+          <td><span class="dot ${st}">● ${st}</span>${s.last_error && st !== 'UP' ? `<div class="muted">${esc(s.last_error)}</div>` : ''}</td>
+          <td class="dot">${uptime(s)}</td>
+          <td class="dot">${s.incidents_count}</td>
+          <td>${lastHtml}</td>
+          <td><select onchange="save('${s.id}', { stage: this.value })">
+            ${Object.entries(STAGES).map(([k, l]) => `<option value="${k}" ${k === s.stage ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>${s.contacted_at ? `<div class="muted">${esc(shortDate(s.contacted_at, 'en'))}</div>` : ''}</td>
+          <td><input type="email" placeholder="info@…" value="${esc(s.contact_email || '')}" onchange="save('${s.id}', { contact_email: this.value })" /></td>
+          <td><div class="acts">
+            ${s.incidents_count ? `<button class="btn btn-primary" onclick="openEmail('${s.id}')">Email</button>` : ''}
+            <a class="btn btn-secondary" href="${esc(s.report_url)}" target="_blank" rel="noopener">Report ↗</a>
+            ${!s.is_active && st !== 'DEAD' && st !== 'BLOCKED' ? `<button class="btn btn-ghost" onclick="save('${s.id}', { is_active: true })">Resume</button>` : ''}
+            <button class="btn btn-ghost" title="Delete" onclick="removeSite('${s.id}', '${esc(s.domain)}')">✕</button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function setFilter(k) { FILTER = k; render(); }
+
+    async function save(id, fields) {
+      try {
+        await api('update', { id, fields });
+        const s = SITES.find(x => x.id === id);
+        if (s) {
+          Object.assign(s, fields);
+          if (fields.stage === 'contacted') s.contacted_at = new Date().toISOString();
+        }
+        if ('stage' in fields || 'is_active' in fields) render();
+        AppUtils.showToast('Saved', 'success');
+      } catch (e) { AppUtils.showToast(e.message, 'error'); }
+    }
+
+    async function removeSite(id, domain) {
+      if (!confirm('Delete ' + domain + ' and its report?')) return;
+      try {
+        await api('delete', { id });
+        SITES = SITES.filter(s => s.id !== id);
+        render();
+      } catch (e) { AppUtils.showToast(e.message, 'error'); }
+    }
+
+    document.getElementById('add-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('add-btn');
+      const lines = document.getElementById('add-lines').value;
+      if (!lines.trim()) return;
+      btn.disabled = true; btn.textContent = 'Adding…';
+      try {
+        const r = await api('add', { lines, source: document.getElementById('add-source').value });
+        document.getElementById('add-result').textContent =
+          `Added ${r.added}. Already in list: ${r.duplicates}. Invalid lines: ${r.invalid}.`;
+        document.getElementById('add-lines').value = '';
+        FILTER = 'watching';
+        await load();
+      } catch (e) { AppUtils.showToast(e.message, 'error'); }
+      btn.disabled = false; btn.textContent = 'Add to watchlist';
+    });
+
+    /* ── email generator ── */
+    function getSignature() {
+      let sig = null;
+      try { sig = localStorage.getItem('pw_signature'); } catch {}
+      return sig || DEFAULT_SIGNATURE;
+    }
+
+    function buildEmail(s, lang) {
+      const incs = s.incidents.slice(0, 3);
+      const ongoing = s.last_status === 'DOWN';
+      const lines = incs.map(i => i.resolved_at
+        ? `• ${dateText(i.started_at, lang)} — ${durText(i.duration_seconds, lang)} (${reasonText(i, lang)})`
+        : (lang === 'ru'
+            ? `• с ${dateText(i.started_at, lang)} — до сих пор не открывается (${reasonText(i, lang)})`
+            : `• since ${dateText(i.started_at, lang)} — still down (${reasonText(i, lang)})`)
+      ).join('\n');
+      const more = s.incidents_count > 3
+        ? (lang === 'ru' ? `\n…и ещё ${s.incidents_count - 3} за последние 30 дней.` : `\n…and ${s.incidents_count - 3} more in the last 30 days.`)
+        : '';
+      const sig = getSignature();
+      const first = incs[0];
+
+      if (lang === 'ru') {
+        return {
+          subject: ongoing ? `${s.domain} сейчас не открывается` : `${s.domain} был недоступен ${shortDate(first.started_at, 'ru')} — небольшое предупреждение`,
+          body:
+`Здравствуйте!
+
+Я делаю PingWatch — небольшой сервис мониторинга сайтов. Наши автоматические проверки заметили, что ${s.domain} ${ongoing ? 'сейчас недоступен' : 'был недоступен'}:
+
+${lines}${more}
+
+Полный отчёт: ${s.report_url}
+
+${ongoing ? 'Прямо сейчас посетители видят ошибку вместо вашего сайта.' : 'В это время посетители видели ошибку вместо вашего сайта.'} Если хотите в следующий раз узнавать об этом за пару минут — в Telegram или на почту, — PingWatch делает это бесплатно для 2 сайтов.
+
+Если неинтересно — просто ответьте «нет», и я больше не напишу.
+
+${sig}`
+        };
+      }
+      return {
+        subject: ongoing ? `${s.domain} is down right now` : `${s.domain} was down on ${shortDate(first.started_at, 'en')} — quick heads-up`,
+        body:
+`Hi,
+
+I run PingWatch, a small uptime-monitoring service. Our automated checks noticed that ${s.domain} ${ongoing ? 'is unreachable right now' : 'was unreachable'}:
+
+${lines}${more}
+
+Full report: ${s.report_url}
+
+${ongoing ? 'Right now visitors see an error instead of your site.' : 'During that time visitors saw an error instead of your site.'} If you'd like a Telegram or email message within minutes next time, PingWatch does that for free for up to 2 sites.
+
+If this isn't useful, just reply "no" and I won't write again.
+
+${sig}`
+      };
+    }
+
+    function fillEmail() {
+      const e = buildEmail(EM_SITE, EM_LANG);
+      document.getElementById('em-subject').value = e.subject;
+      document.getElementById('em-body').value = e.body;
+      updateMailto();
+      document.getElementById('lang-en').className = 'btn btn-sm ' + (EM_LANG === 'en' ? 'btn-primary' : 'btn-secondary');
+      document.getElementById('lang-ru').className = 'btn btn-sm ' + (EM_LANG === 'ru' ? 'btn-primary' : 'btn-secondary');
+    }
+    function updateMailto() {
+      const to = EM_SITE.contact_email || '';
+      const href = 'mailto:' + encodeURIComponent(to) +
+        '?subject=' + encodeURIComponent(document.getElementById('em-subject').value) +
+        '&body=' + encodeURIComponent(document.getElementById('em-body').value);
+      document.getElementById('em-mailto').href = href;
+    }
+    function setLang(l) { EM_LANG = l; fillEmail(); }
+
+    function openEmail(id) {
+      EM_SITE = SITES.find(s => s.id === id);
+      if (!EM_SITE) return;
+      EM_LANG = /\.(ru|by|kz|ua)$/.test(EM_SITE.domain) ? 'ru' : 'en';
+      document.getElementById('em-title').textContent = 'Email to ' + EM_SITE.domain;
+      document.getElementById('em-signature').value = getSignature();
+      fillEmail();
+      AppUtils.openModal('modal-email');
+    }
+
+    document.getElementById('em-subject').addEventListener('input', updateMailto);
+    document.getElementById('em-body').addEventListener('input', updateMailto);
+    document.getElementById('em-signature').addEventListener('change', (e) => {
+      try { localStorage.setItem('pw_signature', e.target.value.trim()); } catch {}
+      fillEmail();
+    });
+    document.getElementById('em-contacted').addEventListener('click', async () => {
+      if (!EM_SITE) return;
+      await save(EM_SITE.id, { stage: 'contacted' });
+      AppUtils.closeModal('modal-email');
+    });
+
+    async function copyField(id) {
+      const v = document.getElementById(id).value;
+      try { await navigator.clipboard.writeText(v); AppUtils.showToast('Copied', 'success'); }
+      catch { document.getElementById(id).select(); document.execCommand('copy'); AppUtils.showToast('Copied', 'success'); }
+    }
+  </script>
+</body>
+</html>

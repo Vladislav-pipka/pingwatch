@@ -1,5 +1,9 @@
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
+const { ping, pingConfirmed, runPool } = require('../lib/ping');
+
+const escHtml = (v) => String(v == null ? '' : v)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 function formatTime(date, timeZone) {
   try {
@@ -19,100 +23,6 @@ function formatTime(date, timeZone) {
   }
 }
 
-function classifyFailure(status, errMsg) {
-  const msg = (errMsg || '').toLowerCase();
-
-  if (status === 401 || status === 403) return { reason: 'Access denied', details: `HTTP ${status}` };
-  if (status === 404) return { reason: 'Page not found', details: 'HTTP 404' };
-  if (status === 408) return { reason: 'Request timeout', details: 'HTTP 408 — Server timeout' };
-  if (status === 429) return { reason: 'Rate limited', details: 'HTTP 429 — Too Many Requests' };
-  if (status === 500) return { reason: 'Internal server error', details: 'HTTP 500' };
-  if (status === 502) return { reason: 'Bad gateway', details: 'HTTP 502' };
-  if (status === 503) return { reason: 'Service unavailable', details: 'HTTP 503' };
-  if (status === 504) return { reason: 'Gateway timeout', details: 'HTTP 504' };
-  if (status >= 500) return { reason: 'Server error', details: `HTTP ${status}` };
-
-  if (msg.includes('aborted') || msg.includes('timeout')) {
-    return { reason: 'Request timeout', details: 'The server took too long to respond (>12s)' };
-  }
-
-  if (msg.includes('enotfound') || msg.includes('getaddrinfo') || msg.includes('dns')) {
-    return { reason: 'DNS failure', details: 'Domain could not be resolved' };
-  }
-
-  if (msg.includes('certificate') || msg.includes('ssl') || msg.includes('tls') || msg.includes('cert')) {
-    return { reason: 'SSL / TLS error', details: 'Certificate or TLS handshake problem' };
-  }
-
-  if (msg.includes('econnrefused') || msg.includes('refused')) {
-    return { reason: 'Connection refused', details: 'The server refused the connection' };
-  }
-
-  if (msg.includes('econnreset') || msg.includes('reset')) {
-    return { reason: 'Connection reset', details: 'The server closed the connection unexpectedly' };
-  }
-
-  return { reason: 'Connection failed', details: errMsg || 'Unknown error' };
-}
-
-async function ping(url, timeoutMs = 12000) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-
-  try {
-    const started = Date.now();
-
-    const res = await fetch(url, {
-      method: 'GET',
-      signal: ctrl.signal,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'PingWatch/1.0 (+https://pingwatch.netlify.app)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    });
-
-    clearTimeout(timer);
-
-    const responseTime = Date.now() - started;
-    const up = res.status < 400;
-
-    if (up) {
-      return {
-        up: true,
-        status: res.status,
-        responseTime,
-        reason: null,
-        details: null,
-      };
-    }
-
-    const failure = classifyFailure(res.status);
-
-    return {
-      up: false,
-      status: res.status,
-      responseTime,
-      reason: failure.reason,
-      details: failure.details,
-    };
-  } catch (err) {
-    clearTimeout(timer);
-
-    const failure = classifyFailure(0, err.message);
-
-    return {
-      up: false,
-      status: 0,
-      responseTime: null,
-      errMsg: err.message,
-      reason: failure.reason,
-      details: failure.details,
-    };
-  }
-}
-
 async function notifyTelegram(token, chatId, text) {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
@@ -120,7 +30,8 @@ async function notifyTelegram(token, chatId, text) {
     body: JSON.stringify({
       chat_id: chatId,
       text,
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
     }),
   });
 
@@ -194,7 +105,8 @@ async function sendAlert(notifParams, monitor, isDown, checkResult) {
       + (checkResult.status ? `\n🔢 Status: ${checkResult.status}` : '')
     : '';
 
-  const mdText = `*${monitor.name}* is ${label}\nURL: \`${monitor.url}\`${reasonLines}\n🕐 ${localTime}`;
+  // HTML instead of Markdown: a name like "my_site" used to break Markdown parsing and the alert was lost.
+  const htmlText = `<b>${escHtml(monitor.name)}</b> is ${label}\nURL: <code>${escHtml(monitor.url)}</code>${escHtml(reasonLines)}\n🕐 ${escHtml(localTime)}`;
   const plainText = `${monitor.name} is ${label}\nURL: ${monitor.url}${reasonLines}\nTime: ${localTime}`;
 
   try {
@@ -204,7 +116,7 @@ async function sendAlert(notifParams, monitor, isDown, checkResult) {
 
       if (!token || !chatId) throw new Error('Telegram config missing');
 
-      await notifyTelegram(token, chatId, mdText);
+      await notifyTelegram(token, chatId, htmlText);
 
     } else if (channel === 'discord') {
       if (!discordWebhookUrl) throw new Error('Discord webhook URL not configured');
@@ -235,10 +147,13 @@ async function sendAlert(notifParams, monitor, isDown, checkResult) {
 }
 
 async function processMonitor(sb, monitor, now) {
-  const checkResult = await ping(monitor.url);
+  const prevStatus = monitor.last_status;
+  // When the site was UP, a failure is re-checked once before we call it DOWN (no false alarms).
+  const checkResult = prevStatus === 'DOWN'
+    ? await ping(monitor.url, 10000)
+    : await pingConfirmed(monitor.url, { timeoutMs: 8000, retryDelayMs: 2000, retryTimeoutMs: 7000 });
   const { up } = checkResult;
   const newStatus = up ? 'UP' : 'DOWN';
-  const prevStatus = monitor.last_status;
   const changed = prevStatus !== newStatus;
 
   const { error: updateErr } = await sb
@@ -387,7 +302,8 @@ exports.handler = async function () {
           timezone
         )
       `)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .order('last_checked_at', { ascending: true, nullsFirst: true });
 
     if (fetchErr) {
       console.error('Error fetching monitors:', fetchErr.message);
@@ -404,23 +320,24 @@ exports.handler = async function () {
     const now = new Date().toISOString();
     const results = [];
 
-    const BATCH = 10;
+    // Netlify scheduled functions are limited to ~30s, so run checks in parallel and stop
+    // starting new ones after 12s. Anything skipped is checked first on the next run.
+    const settled = await runPool(
+      monitors,
+      (monitor) => processMonitor(sb, monitor, now),
+      { concurrency: 25, deadlineMs: 12000 }
+    );
 
-    for (let i = 0; i < monitors.length; i += BATCH) {
-      const batch = monitors.slice(i, i + BATCH);
-
-      const settled = await Promise.allSettled(
-        batch.map((monitor) => processMonitor(sb, monitor, now))
-      );
-
-      for (const outcome of settled) {
-        if (outcome.status === 'fulfilled') {
-          results.push(outcome.value);
-        } else {
-          console.error(`[BATCH ERR] Unhandled rejection: ${outcome.reason}`);
-        }
+    for (const outcome of settled) {
+      if (outcome === undefined) continue; // skipped because of the deadline
+      if (outcome && outcome.error) {
+        console.error(`[POOL ERR] ${outcome.error.message || outcome.error}`);
+      } else {
+        results.push(outcome);
       }
     }
+    const skipped = settled.filter((o) => o === undefined).length;
+    if (skipped) console.warn(`[RUN] ${skipped} monitors skipped this run (time limit)`);
 
     console.log(
       `[RUN DONE] checked=${results.length} down=${results.filter(r => r.status === 'DOWN').length}`

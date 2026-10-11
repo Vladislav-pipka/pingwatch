@@ -40,3 +40,15 @@
   status = 301
 [functions."check-monitors"]
   schedule = "*/5 * * * *"
+
+# Public downtime reports for outreach: pingwatch.org/r/<slug>
+[[redirects]]
+  from = "/r/:slug"
+  to = "/.netlify/functions/report?slug=:slug"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/admin*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

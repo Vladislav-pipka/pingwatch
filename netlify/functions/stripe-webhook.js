@@ -8,10 +8,15 @@ const supabase = createClient(
 );
 
 // Маппинг Stripe Price ID → название плана
+// ВАЖНО: раньше здесь были только старые ID, а checkout использует новые (price_1TVJ...).
+// Из-за этого любое "subscription.updated" сбрасывало платного юзера на free.
 const PRICE_TO_PLAN = {
-  'price_1TS0fHH7w95uyPVpwlIDBr7R': 'pro',
-  'price_1TS0frH7w95uyPVpqseFCoQz': 'unlimited',
+  'price_1TVJBKH6KbqcVzkR4KnfydIi': 'pro',        // текущий (create-checkout-session)
+  'price_1TVJBLH6KbqcVzkRWXldbzfe': 'unlimited',  // текущий (create-checkout-session)
+  'price_1TS0fHH7w95uyPVpwlIDBr7R': 'pro',        // старый
+  'price_1TS0frH7w95uyPVpqseFCoQz': 'unlimited',  // старый
 };
+const ACTIVE_STATUSES = ['active', 'trialing', 'past_due'];
 
 exports.handler = async (event) => {
   const sig = event.headers['stripe-signature'];
@@ -52,12 +57,16 @@ exports.handler = async (event) => {
     const subscription = stripeEvent.data.object;
     const customerId = subscription.customer;
     const priceId = subscription.items.data[0]?.price?.id;
-    const newPlan = PRICE_TO_PLAN[priceId] || 'free';
+    const knownPlan = PRICE_TO_PLAN[priceId] || subscription.metadata?.plan;
 
-    await supabase
-      .from('users')
-      .update({ plan: newPlan })
-      .eq('stripe_customer_id', customerId);
+    if (!ACTIVE_STATUSES.includes(subscription.status)) {
+      await supabase.from('users').update({ plan: 'free' }).eq('stripe_customer_id', customerId);
+    } else if (knownPlan) {
+      await supabase.from('users').update({ plan: knownPlan }).eq('stripe_customer_id', customerId);
+    } else {
+      // Неизвестная цена — лучше ничего не менять, чем случайно отобрать оплаченный план.
+      console.warn(`[stripe-webhook] unknown price ${priceId} for customer ${customerId}, plan unchanged`);
+    }
   }
 
   // Отмена подписки

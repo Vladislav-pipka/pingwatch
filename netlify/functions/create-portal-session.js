@@ -15,7 +15,7 @@ exports.handler = async (event) => {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customer_id,
-      return_url: 'https://pingwatch.netlify.app/dashboard.html',
+      return_url: `${(process.env.SITE_URL || 'https://pingwatch.org').replace(/\/+$/, '')}/dashboard`,
     });
 
     return {

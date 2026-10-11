@@ -1,0 +1,30 @@
+name: Outreach checks
+
+# Quiet uptime checks of outreach candidate sites.
+# Runs here instead of Netlify so it doesn't use Netlify credits
+# (GitHub Actions minutes are free for public repositories).
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # GitHub may start it a few minutes late — that's fine
+  workflow_dispatch: {}      # "Run workflow" button for manual runs
+
+concurrency:
+  group: outreach-checks
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --omit=dev
+      - run: node scripts/run-outreach.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          OUTREACH_DEADLINE_MS: '240000'
