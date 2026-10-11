@@ -301,6 +301,7 @@
       </a>
 
       <div class="topbar__right">
+        <a href="admin.html" id="nav-outreach" class="btn btn-ghost btn-sm" style="display:none">Outreach</a>
         <span class="topbar__user" id="disp-email"></span>
         <button class="ch-badge" id="disp-channel" onclick="openChannelModal()" title="Click to change notification channel" style="cursor:pointer;background:none;border:1px solid oklch(from var(--color-primary) l c h / 0.25);border-radius:var(--radius-full);padding:2px 8px;font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary)">—</button>
         <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
@@ -530,6 +531,7 @@
       await loadProfile();
       await loadAll();
       await addPendingMonitor();
+      showOutreachLinkIfAdmin();
 
       const params = new URLSearchParams(window.location.search);
       if (params.get('connect') === 'telegram') {
@@ -565,6 +567,16 @@
         AppUtils.showToast(host + ' is now monitored 24/7.', 'success');
         await loadAll();
       }
+    }
+
+    /* ── Admin-only link to the outreach page ── */
+    async function showOutreachLinkIfAdmin() {
+      try {
+        const resp = await fetch('/.netlify/functions/outreach-admin', {
+          method: 'POST', headers: await authHeaders(), body: JSON.stringify({ action: 'me' })
+        });
+        if (resp.ok) document.getElementById('nav-outreach').style.display = 'inline-flex';
+      } catch {}
     }
 
     /* ── Auth header for our Netlify functions ── */

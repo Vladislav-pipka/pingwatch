@@ -36,6 +36,9 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'Invalid JSON' }); }
   const action = body.action;
 
+  // ── me (is the current user an admin?) ────────────────
+  if (action === 'me') return json(200, { admin: true });
+
   // ── list ───────────────────────────────────────────────
   if (action === 'list') {
     const { data: sites, error } = await sb
