@@ -533,6 +533,10 @@
 
       const params = new URLSearchParams(window.location.search);
       if (params.get('connect') === 'telegram') {
+        // openChannelModal lives in a later <script> block — wait until the page is fully loaded.
+        if (document.readyState !== 'complete') {
+          await new Promise(r => window.addEventListener('load', r, { once: true }));
+        }
         await openChannelModal('telegram');
         history.replaceState(null, '', window.location.pathname);
       }

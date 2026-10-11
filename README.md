@@ -4,7 +4,7 @@ Uptime monitoring for developers, indie hackers, and small SaaS teams.
 
 PingWatch checks your website or API automatically and sends instant alerts when it goes down — via Telegram, Discord, Slack, or email.
 
-**Live:** [pingwatch.netlify.app](https://pingwatch.netlify.app)
+**Live:** [pingwatch.org](https://pingwatch.org)
 
 ---
 
@@ -34,9 +34,30 @@ PingWatch checks your website or API automatically and sends instant alerts when
 
 ## Guides
 
-- [How to get Telegram alerts when your site goes down](https://pingwatch.netlify.app/telegram-alerts.html)
-- [Free uptime monitoring for side projects](https://pingwatch.netlify.app/free-uptime-monitoring.html)
-- [How to monitor API uptime without building your own scripts](https://pingwatch.netlify.app/api-uptime-monitoring.html)
+- [How to get Telegram alerts when your site goes down](https://pingwatch.org/telegram-alerts)
+- [Free uptime monitoring for side projects](https://pingwatch.org/free-uptime-monitoring)
+- [How to monitor API uptime without building your own scripts](https://pingwatch.org/api-uptime-monitoring)
+
+## Environment variables (Netlify → Site configuration → Environment variables)
+
+| Name | What |
+|---|---|
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Supabase project URL and service-role key |
+| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
+| `TELEGRAM_BOT_USERNAME` | Bot username without @ (default `S1te_Watch_Bot`) |
+| `TELEGRAM_WEBHOOK_SECRET` | Random string, also passed to `setWebhook` as `secret_token` |
+| `ADMIN_EMAILS` | Comma-separated emails allowed to open `/admin.html` |
+| `SITE_URL` | Optional, default `https://pingwatch.org` |
+| `SUPPORT_EMAIL` | Optional, shown on outage reports |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Payments |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Email alerts |
+
+Database changes live in `supabase/*.sql` — run them in the Supabase SQL Editor.
+
+## Outreach
+
+`/admin.html` — add candidate sites, PingWatch checks them quietly (`check-outreach`, every 5 min),
+confirmed outages show up with a ready-to-send email and a private report page at `/r/<slug>`.
 
 ---
 
