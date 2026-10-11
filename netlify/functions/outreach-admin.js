@@ -2,23 +2,10 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { getUserFromEvent, isAdmin, json } = require('../lib/auth');
+const { normalizeSite } = require('../lib/sites');
 
 const STAGES = ['watching', 'contacted', 'replied', 'signed_up', 'not_interested'];
 const DAYS = 30;
-
-// "https://www.Shop.lv/about?x=1" → { domain: "shop.lv", url: "https://www.shop.lv" }
-function normalizeSite(raw) {
-  let s = String(raw || '').trim();
-  if (!s || s.startsWith('#')) return null;
-  s = s.split(/[\s,;]+/)[0];
-  if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
-  let u;
-  try { u = new URL(s); } catch { return null; }
-  const host = u.hostname.toLowerCase().replace(/\.$/, '');
-  if (!host.includes('.') || host.length > 253 || /[^a-z0-9.-]/.test(host)) return null;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || host === 'localhost') return null;
-  return { domain: host.replace(/^www\./, ''), url: `${u.protocol}//${host}` };
-}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
