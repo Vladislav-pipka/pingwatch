@@ -17,7 +17,7 @@ exports.handler = async function () {
 
   const { data: sites, error } = await sb
     .from('outreach_sites')
-    .select('id, domain, url, last_status, checks_total, checks_up')
+    .select('id, domain, url, last_status, checks_total, checks_up, suspect_since')
     .eq('is_active', true)
     .order('last_checked_at', { ascending: true, nullsFirst: true })
     .limit(MAX_SITES_PER_RUN);
@@ -42,7 +42,7 @@ exports.handler = async function () {
   );
 
   const rows = [];
-  let down = 0, blocked = 0, dead = 0, broken = 0;
+  let down = 0, blocked = 0, dead = 0, broken = 0, suspect = 0;
 
   for (const item of checked) {
     if (!item || item.error || !item.site) continue;
@@ -79,10 +79,19 @@ exports.handler = async function () {
       row.is_active = false;
       row.add_total = 0;
       dead++;
-    } else if (prev === 'UP' || prev === 'DOWN') {
-      // Real outage: it worked before, now it doesn't.
+    } else if (prev === 'UP') {
+      // First failed run after being up: only a suspicion. It becomes an outage only if the
+      // NEXT run (~10 min later) fails too — this filters out network hiccups on our side.
+      row.last_status = 'SUSPECT';
+      row.suspect_since = at;
+      suspect++;
+    } else if (prev === 'SUSPECT' || prev === 'DOWN') {
+      // Confirmed outage: failed on two runs in a row.
       row.last_status = 'DOWN';
-      row.open_incident = prev === 'UP';
+      if (prev === 'SUSPECT') {
+        row.open_incident = true;
+        row.incident_started_at = site.suspect_since || at;
+      }
       row.error_reason = r.reason;
       row.error_details = r.details;
       down++;
@@ -108,6 +117,6 @@ exports.handler = async function () {
   }
 
   const skipped = checked.filter((x) => x === undefined).length;
-  console.log(`[outreach] checked=${rows.length} down=${down} broken=${broken} blocked=${blocked} dead=${dead} skipped=${skipped}`);
-  return { statusCode: 200, body: JSON.stringify({ checked: rows.length, down, broken, blocked, dead, skipped }) };
+  console.log(`[outreach] checked=${rows.length} down=${down} suspect=${suspect} broken=${broken} blocked=${blocked} dead=${dead} skipped=${skipped}`);
+  return { statusCode: 200, body: JSON.stringify({ checked: rows.length, down, suspect, broken, blocked, dead, skipped }) };
 };
