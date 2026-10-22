@@ -35,7 +35,7 @@ async function fromHackerNews(fetchFn, { days, limit }) {
     for (const h of hits) {
       if (!h.url) continue;
       const date = h.created_at ? h.created_at.slice(0, 10) : '';
-      out.push({ url: h.url, source: 'Show HN', note: `${(h.title || '').slice(0, 160)} (${date})` });
+      out.push({ url: h.url, source: 'Show HN', author: h.author || null, note: `${(h.title || '').slice(0, 160)} (${date})${h.author ? ' by ' + h.author : ''}` });
     }
     const oldest = Math.min(...hits.map((h) => h.created_at_i || cursor));
     if (oldest >= cursor) break;
@@ -66,31 +66,96 @@ async function fromGitHub(fetchFn, { days, limit, token }) {
   return out;
 }
 
-// ── Contact email from the homepage (public mailto / visible address) ──
+// ── Contact email: homepage, then common contact pages, then the HN author's profile ──
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,24}/gi;
-const BAD_EMAIL = /(\.(png|jpe?g|gif|svg|webp|avif)$)|example\.|sentry|wixpress|@2x|@3x|u003e|noreply|no-reply|domain\.com|email\.com|yourdomain|privacy@|abuse@/i;
+const BAD_EMAIL = /(\.(png|jpe?g|gif|svg|webp|avif|js|css)$)|example\.|sentry|wixpress|@2x|@3x|u003e|noreply|no-reply|donotreply|domain\.com|email\.com|yourdomain|yoursite|privacy@|abuse@|postmaster@|@sentry/i;
+const CONTACT_PATHS = ['/contact', '/about', '/support', '/contact-us', '/impressum', '/imprint'];
+
+function decodeEntities(str) {
+  return String(str || '')
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+}
+
+// "john [at] site [dot] com", "john (at) site.com", "john at site dot com" → john@site.com
+// Pages: only bracketed forms ([at], (at)) — plain " at " would turn "try it at site.com" into a fake address.
+// HN profiles (loose): also plain "me at site dot com", which is how people write it there.
+function deobfuscate(text, { loose = false } = {}) {
+  const at = loose ? /\s*(?:\[at\]|\(at\)|\{at\}|\s+at\s+)\s*/gi : /\s*(?:\[at\]|\(at\)|\{at\})\s*/gi;
+  const dot = loose ? /\s*(?:\[dot\]|\(dot\)|\{dot\}|\s+dot\s+)\s*/gi : /\s*(?:\[dot\]|\(dot\)|\{dot\})\s*/gi;
+  return decodeEntities(text).replace(at, '@').replace(dot, '.');
+}
+
+function extractEmails(html) {
+  const found = new Set();
+  const text = decodeEntities(html);
+  for (const m of text.matchAll(/mailto:([^"'?>\s]+)/gi)) {
+    try { found.add(decodeURIComponent(m[1]).toLowerCase()); } catch { /* bad encoding */ }
+  }
+  for (const m of text.matchAll(EMAIL_RE)) found.add(m[0].toLowerCase());
+  return [...found].filter((e) => !BAD_EMAIL.test(e) && e.length < 100);
+}
 
 function pickEmail(html, domain) {
-  const found = new Set();
-  for (const m of html.matchAll(/mailto:([^"'?>\s]+)/gi)) found.add(decodeURIComponent(m[1]).toLowerCase());
-  for (const m of html.matchAll(EMAIL_RE)) found.add(m[0].toLowerCase());
-  const list = [...found].filter((e) => !BAD_EMAIL.test(e) && e.length < 100);
+  const list = extractEmails(html);
   const root = domain.split('.').slice(-2).join('.');
   return list.find((e) => e.endsWith('@' + domain) || e.endsWith('.' + root) || e.endsWith('@' + root)) || list[0] || null;
 }
 
-async function findEmail(fetchFn, site) {
+async function fetchText(fetchFn, url, ms = 8000) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 8000);
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetchFn(site.url, { headers: { 'User-Agent': UA, Accept: 'text/html' }, redirect: 'follow', signal: ctrl.signal });
+    const res = await fetchFn(url, { headers: { 'User-Agent': UA, Accept: 'text/html' }, redirect: 'follow', signal: ctrl.signal });
     if (!res.ok) return null;
-    const html = (await res.text()).slice(0, 400000);
-    return pickEmail(html, site.domain);
+    return (await res.text()).slice(0, 400000);
   } catch {
     return null;
   } finally {
     clearTimeout(t);
+  }
+}
+
+// HN user profiles often contain "email: me at site dot com" in the free-text "about".
+async function emailFromHnProfile(fetchFn, author) {
+  if (!author) return null;
+  try {
+    const res = await fetchFn(`https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(author)}.json`, { headers: { 'User-Agent': UA } });
+    if (!res.ok) return null;
+    const u = await res.json();
+    if (!u || !u.about) return null;
+    const list = extractEmails(deobfuscate(u.about.replace(/<[^>]+>/g, ' '), { loose: true }));
+    return list[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function findEmail(fetchFn, site, { author } = {}) {
+  const home = await fetchText(fetchFn, site.url);
+  if (home) {
+    const e = pickEmail(home, site.domain) || pickEmail(deobfuscate(home.replace(/<[^>]+>/g, ' ')), site.domain);
+    if (e) return e;
+  }
+  for (const path of CONTACT_PATHS) {
+    const html = await fetchText(fetchFn, site.url + path, 6000);
+    if (!html) continue;
+    const e = pickEmail(html, site.domain) || pickEmail(deobfuscate(html.replace(/<[^>]+>/g, ' ')), site.domain);
+    if (e) return e;
+  }
+  return emailFromHnProfile(fetchFn, author);
+}
+
+// Find the HN author of an already-saved site (for sites collected before we stored authors).
+async function hnAuthorForDomain(fetchFn, domain) {
+  try {
+    const url = `https://hn.algolia.com/api/v1/search?tags=show_hn&restrictSearchableAttributes=url&hitsPerPage=5&query=${encodeURIComponent(domain)}`;
+    const data = await getJson(fetchFn, url);
+    const hit = (data.hits || []).find((h) => h.url && h.url.toLowerCase().includes(domain));
+    return hit ? hit.author : null;
+  } catch {
+    return null;
   }
 }
 
@@ -115,7 +180,7 @@ async function collect({ sb, fetchFn = fetch, env = process.env } = {}) {
   for (const r of raw) {
     const n = normalizeSite(r.url);
     if (!n || isBlockedDomain(n.domain) || byDomain.has(n.domain)) continue;
-    byDomain.set(n.domain, { ...n, source: r.source, notes: r.note });
+    byDomain.set(n.domain, { ...n, source: r.source, notes: r.note, author: r.author || null });
   }
   let candidates = [...byDomain.values()];
 
@@ -132,7 +197,7 @@ async function collect({ sb, fetchFn = fetch, env = process.env } = {}) {
   if (!candidates.length) return { added: 0, withEmail: 0 };
 
   if (withEmails) {
-    await runPool(candidates, async (c) => { c.contact_email = await findEmail(fetchFn, c); }, { concurrency: 20, deadlineMs: 240000 });
+    await runPool(candidates, async (c) => { c.contact_email = await findEmail(fetchFn, c, { author: c.author }); }, { concurrency: 20, deadlineMs: 360000 });
   }
 
   let added = 0;
@@ -148,12 +213,44 @@ async function collect({ sb, fetchFn = fetch, env = process.env } = {}) {
   return { added, withEmail };
 }
 
-module.exports = { collect, fromHackerNews, fromGitHub, pickEmail };
+// ── enrich: fill in missing emails for sites we already watch, outage sites first ──
+async function enrich({ sb, fetchFn = fetch, env = process.env } = {}) {
+  const max = Number(env.LEADS_MAX || 300);
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+  const { data: incs, error: incErr } = await sb.from('outreach_incidents').select('site_id').gte('started_at', since).limit(5000);
+  if (incErr) throw new Error('incidents lookup failed: ' + incErr.message);
+  const outageIds = [...new Set((incs || []).map((i) => i.site_id))];
+
+  let sites = [];
+  for (let i = 0; i < outageIds.length; i += 300) {
+    const { data, error } = await sb.from('outreach_sites').select('id, domain, url, notes, source')
+      .in('id', outageIds.slice(i, i + 300)).is('contact_email', null).eq('is_active', true);
+    if (error) throw new Error('sites lookup failed: ' + error.message);
+    sites = sites.concat(data || []);
+  }
+  sites = sites.slice(0, max);
+  console.log(`[enrich] outage sites without email: ${sites.length}`);
+
+  let found = 0;
+  await runPool(sites, async (site) => {
+    let author = (/ by ([A-Za-z0-9_-]+)$/.exec(site.notes || '') || [])[1] || null;
+    if (!author && site.source === 'Show HN') author = await hnAuthorForDomain(fetchFn, site.domain);
+    const email = await findEmail(fetchFn, site, { author });
+    if (!email) return;
+    const { error } = await sb.from('outreach_sites').update({ contact_email: email }).eq('id', site.id);
+    if (!error) found++;
+  }, { concurrency: 10, deadlineMs: 480000 });
+  return { checked: sites.length, found };
+}
+
+module.exports = { collect, enrich, fromHackerNews, fromGitHub, pickEmail, deobfuscate, emailFromHnProfile, __findEmail: findEmail };
 
 if (require.main === module) {
   const { createClient } = require('@supabase/supabase-js');
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY);
-  collect({ sb })
-    .then((r) => console.log(`[leads] added ${r.added} new sites (${r.withEmail} with a contact email)`))
-    .catch((e) => { console.error(e); process.exit(1); });
+  const mode = process.env.LEADS_MODE || 'collect';
+  const job = mode === 'enrich'
+    ? enrich({ sb }).then((r) => console.log(`[enrich] found emails for ${r.found} of ${r.checked} outage sites`))
+    : collect({ sb }).then((r) => console.log(`[leads] added ${r.added} new sites (${r.withEmail} with a contact email)`));
+  job.catch((e) => { console.error(e); process.exit(1); });
 }
