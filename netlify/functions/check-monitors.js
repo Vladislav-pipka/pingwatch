@@ -272,6 +272,36 @@ async function processMonitor(sb, monitor, now) {
   };
 }
 
+// Once an hour: housekeeping that doesn't need to run every 5 minutes.
+async function hourlyMaintenance(sb) {
+  // 1) Keep check history to 30 days — the free Supabase database is only 500 MB.
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
+  const { error: delErr } = await sb.from('monitor_checks').delete().lt('checked_at', cutoff);
+  if (delErr) console.error('[MAINT] cleanup failed:', delErr.message);
+
+  // 2) Watchdog: outreach checks are started by Supabase pg_cron through a GitHub token.
+  //    When that token expires they silently stop — tell the admin on Telegram.
+  const { data: last, error: lastErr } = await sb
+    .from('outreach_sites').select('last_checked_at')
+    .eq('is_active', true).not('last_checked_at', 'is', null)
+    .order('last_checked_at', { ascending: false }).limit(1).maybeSingle();
+  if (lastErr || !last) return; // no outreach table / no sites — nothing to watch
+
+  const ageMin = Math.round((Date.now() - new Date(last.last_checked_at).getTime()) / 60000);
+  if (ageMin < 90) return;
+
+  const admins = String(process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!admins.length || !token) return;
+  const { data: rows } = await sb.from('users').select('email, telegram_chat_id').in('email', admins);
+  const text = `⚠️ PingWatch outreach checks stopped: last check was ${ageMin} min ago.\n`
+    + 'Most likely the GitHub token used by Supabase pg_cron expired — create a new one and update the vault secret "github_dispatch_token".';
+  for (const r of rows || []) {
+    if (!r.telegram_chat_id) continue;
+    try { await notifyTelegram(token, r.telegram_chat_id, escHtml(text)); } catch (e) { console.error('[MAINT] watchdog alert failed:', e.message); }
+  }
+}
+
 exports.handler = async function () {
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -312,6 +342,9 @@ exports.handler = async function () {
 
     if (!monitors?.length) {
       console.log('No active monitors to check.');
+      if (new Date().getUTCMinutes() < 5) {
+        try { await hourlyMaintenance(sb); } catch (e) { console.error('[MAINT]', e.message); }
+      }
       return { statusCode: 200, body: 'No active monitors' };
     }
 
@@ -338,6 +371,10 @@ exports.handler = async function () {
     }
     const skipped = settled.filter((o) => o === undefined).length;
     if (skipped) console.warn(`[RUN] ${skipped} monitors skipped this run (time limit)`);
+
+    if (new Date().getUTCMinutes() < 5) {
+      try { await hourlyMaintenance(sb); } catch (e) { console.error('[MAINT]', e.message); }
+    }
 
     console.log(
       `[RUN DONE] checked=${results.length} down=${results.filter(r => r.status === 'DOWN').length}`

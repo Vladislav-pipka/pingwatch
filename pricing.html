@@ -763,22 +763,16 @@
           const session = await AppUtils.getSession();
 
           if (!session) {
-            alert('No session on pricing page');
-            if (btn) {
-              btn.disabled = false;
-              btn.textContent = originalText;
-            }
+            // Not signed in yet: send them to sign up first instead of a dead-end alert.
+            try { localStorage.setItem('pw_pending_plan', plan); } catch (_) {}
+            window.location.href = '/?plan=' + encodeURIComponent(plan) + '#start';
             return;
           }
 
           const res = await fetch('/.netlify/functions/create-checkout-session', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              plan,
-              user_id: session.user.id,
-              email: session.user.email
-            })
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+            body: JSON.stringify({ plan })
           });
 
           const data = await res.json();

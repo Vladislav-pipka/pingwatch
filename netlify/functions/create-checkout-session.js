@@ -1,4 +1,6 @@
 const Stripe = require('stripe');
+const { createClient } = require('@supabase/supabase-js');
+const { getUserFromEvent } = require('../lib/auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -7,7 +9,16 @@ exports.handler = async (event) => {
 
   try {
     const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-    const { plan, user_id, email } = JSON.parse(event.body);
+    const { plan } = JSON.parse(event.body || '{}');
+
+    // Who is paying comes from the login token, not from the request body.
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY);
+    const authUser = await getUserFromEvent(sb, event);
+    if (!authUser) {
+      return { statusCode: 401, body: JSON.stringify({ error: 'Not signed in' }) };
+    }
+    const user_id = authUser.id;
+    const email = authUser.email;
 
     const PRICE_IDS = {
       pro: 'price_1TVJBKH6KbqcVzkR4KnfydIi',

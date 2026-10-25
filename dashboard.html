@@ -531,6 +531,14 @@
       await loadProfile();
       await loadAll();
       await addPendingMonitor();
+
+      // Clicked "Get Pro" before having an account → back to pricing to finish the upgrade.
+      let pendingPlan = null;
+      try { pendingPlan = localStorage.getItem('pw_pending_plan'); localStorage.removeItem('pw_pending_plan'); } catch {}
+      if (pendingPlan && userPlan === 'free') {
+        window.location.href = 'pricing.html?continue=' + encodeURIComponent(pendingPlan);
+        return;
+      }
       showOutreachLinkIfAdmin();
 
       const params = new URLSearchParams(window.location.search);
@@ -720,7 +728,7 @@
               <div class="toggle__thumb"></div>
             </label>
             <div class="monitor-actions">
-              <button class="btn btn-ghost btn-sm" onclick="openDel('${m.id}','${escAttr(m.name)}')"
+              <button class="btn btn-ghost btn-sm" onclick="openDel('${m.id}')"
                       aria-label="Delete ${esc(m.name)}" title="Delete">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <polyline points="3 6 5 6 21 6"/>
@@ -892,7 +900,9 @@
     }
 
     /* ── Delete monitor ── */
-    function openDel(id, name) {
+    function openDel(id) {
+      const m = monitors.find(x => x.id === id);
+      const name = m ? m.name : '';
       delTargetId = id;
       const delNameEl = document.getElementById('del-name');
       if (delNameEl) delNameEl.textContent = name;
@@ -944,27 +954,19 @@
       btn.textContent = 'Loading';
 
       try {
-        const sb = AppUtils.getSupabase();
-        const { data, error } = await sb
-          .from('users')
-          .select('stripe_customer_id')
-          .eq('id', currentUser.id)
-          .single();
+        const res = await fetch('/.netlify/functions/create-portal-session', {
+          method: 'POST',
+          headers: await authHeaders(),
+          body: JSON.stringify({})
+        });
 
-        if (error || !data?.stripe_customer_id) {
-          AppUtils.showToast('No active subscription found.', 'error');
+        const json = await res.json();
+        if (!res.ok && json.error) {
+          AppUtils.showToast(json.error, 'error');
           btn.disabled = false;
           btn.textContent = 'Manage plan';
           return;
         }
-
-        const res = await fetch('/.netlify/functions/create-portal-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customerid: data.stripe_customer_id })
-        });
-
-        const json = await res.json();
 
         btn.disabled = false;
         btn.textContent = 'Manage plan';
