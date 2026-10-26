@@ -38,8 +38,6 @@
   from = "/status.html"
   to = "/status"
   status = 301
-[functions."check-monitors"]
-  schedule = "*/5 * * * *"
 
 # Public downtime reports for outreach: pingwatch.org/r/<slug>
 [[redirects]]
