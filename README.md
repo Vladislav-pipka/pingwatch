@@ -54,6 +54,12 @@ PingWatch checks your website or API automatically and sends instant alerts when
 
 Database changes live in `supabase/*.sql` — run them in the Supabase SQL Editor.
 
+## Scheduled jobs (no Netlify credits)
+
+Both run on GitHub Actions, started by Supabase pg_cron through `net.http_post` to the workflow_dispatch API:
+- `monitor-checks.yml` → `netlify/jobs/check-monitors.js` every 5 min (customer alerts)
+- `outreach-checks.yml` → `netlify/jobs/check-outreach.js` every 10 min
+
 ## Outreach
 
 `/admin.html` — add candidate sites, PingWatch checks them quietly (`netlify/jobs/check-outreach.js`, every ~10 min on GitHub Actions — not on Netlify, to save credits),

@@ -1,0 +1,36 @@
+name: Monitor checks
+
+# Checks customers' monitors and sends DOWN / BACK UP alerts.
+# Started every 5 minutes by Supabase pg_cron (see supabase/2026-10-26-monitors-on-github.sql);
+# the schedule below is only a slow fallback. Runs here instead of Netlify to save credits.
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '7 * * * *'
+
+concurrency:
+  group: monitor-checks
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=dev
+      - run: node scripts/run-monitors.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}

@@ -353,12 +353,13 @@ exports.handler = async function () {
     const now = new Date().toISOString();
     const results = [];
 
-    // Netlify scheduled functions are limited to ~30s, so run checks in parallel and stop
+    // Runs on GitHub Actions now (started every 5 min by Supabase pg_cron) — no Netlify credits used.
+    // Checks run in parallel; the deadline is a safety net so one run never overlaps the next.
     // starting new ones after 12s. Anything skipped is checked first on the next run.
     const settled = await runPool(
       monitors,
       (monitor) => processMonitor(sb, monitor, now),
-      { concurrency: 25, deadlineMs: 12000 }
+      { concurrency: 25, deadlineMs: Number(process.env.MONITORS_DEADLINE_MS || 120000) }
     );
 
     for (const outcome of settled) {
