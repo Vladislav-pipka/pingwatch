@@ -68,7 +68,7 @@ async function fromGitHub(fetchFn, { days, limit, token }) {
 
 // ── Contact email: homepage, then common contact pages, then the HN author's profile ──
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,24}/gi;
-const BAD_EMAIL = /(\.(png|jpe?g|gif|svg|webp|avif|js|css)$)|example\.|sentry|wixpress|@2x|@3x|u003e|noreply|no-reply|donotreply|domain\.com|email\.com|yourdomain|yoursite|privacy@|abuse@|postmaster@|@sentry/i;
+const BAD_EMAIL = /(\.(png|jpe?g|gif|svg|webp|avif|js|css)$)|example\.|sentry|wixpress|@2x|@3x|u003e|noreply|no-reply|donotreply|domain\.com|email\.com|yourdomain|yoursite|privacy@|abuse@|postmaster@|@sentry|^(firstname|first\.?name|name|user|username|your\.?name|john|jane|you|me)@|@(lastname|test|example|email|domain|company)\.|@errors\.|@bugs\.|^[0-9a-f]{24,}@/i;
 const CONTACT_PATHS = ['/contact', '/about', '/support', '/contact-us', '/impressum', '/imprint'];
 
 function decodeEntities(str) {
