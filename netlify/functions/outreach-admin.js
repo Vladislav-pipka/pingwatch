@@ -28,21 +28,29 @@ exports.handler = async (event) => {
 
   // ── list ───────────────────────────────────────────────
   if (action === 'list') {
-    const { data: sites, error } = await sb
-      .from('outreach_sites')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(5000);
-    if (error) return json(500, { error: error.message });
+    // Supabase returns at most 1000 rows per request, so read everything page by page.
+    async function readAll(build, pageSize = 1000, maxRows = 50000) {
+      const out = [];
+      for (let from = 0; from < maxRows; from += pageSize) {
+        const { data, error } = await build().range(from, from + pageSize - 1);
+        if (error) throw new Error(error.message);
+        out.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+      }
+      return out;
+    }
 
+    let sites, incidents;
     const since = new Date(Date.now() - DAYS * 86400000).toISOString();
-    const { data: incidents, error: incErr } = await sb
-      .from('outreach_incidents')
-      .select('site_id, started_at, resolved_at, duration_seconds, error_reason, error_details, status_code')
-      .gte('started_at', since)
-      .order('started_at', { ascending: false })
-      .limit(10000);
-    if (incErr) return json(500, { error: incErr.message });
+    try {
+      sites = await readAll(() => sb.from('outreach_sites').select('*').order('created_at', { ascending: false }).order('id'));
+      incidents = await readAll(() => sb.from('outreach_incidents')
+        .select('site_id, started_at, resolved_at, duration_seconds, error_reason, error_details, status_code')
+        .gte('started_at', since)
+        .order('started_at', { ascending: false }).order('id'));
+    } catch (e) {
+      return json(500, { error: e.message });
+    }
 
     const bySite = {};
     for (const inc of incidents || []) (bySite[inc.site_id] ||= []).push(inc);
