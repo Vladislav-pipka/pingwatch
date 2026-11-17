@@ -228,7 +228,8 @@ async function enrich({ sb, fetchFn = fetch, env = process.env } = {}) {
     if (error) throw new Error('sites lookup failed: ' + error.message);
     sites = sites.concat(data || []);
   }
-  sites = sites.slice(0, max);
+  // Never re-fill an address that already bounced (marked in notes by the admin page / by hand).
+  sites = sites.filter((x) => !/bounced|do not contact/i.test(x.notes || '')).slice(0, max);
   console.log(`[enrich] outage sites without email: ${sites.length}`);
 
   let found = 0;
